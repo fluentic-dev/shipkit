@@ -1,0 +1,39 @@
+{
+  "name": "@fluentic/shipkit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "shipkit": "./dist/bin/shipkit.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./env": "./dist/env.js",
+    "./plugin": "./dist/plugin.js",
+    "./utils": "./dist/utils.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "expo": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo": {
+      "optional": true
+    }
+  }
+}

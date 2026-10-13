@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  npm-dry-run:
+    name: npm publish dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Pack public package
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist-pack"
+          pnpm --dir packages/shipkit pack --pack-destination "$GITHUB_WORKSPACE/dist-pack"
+
+  npm-publish:
+    name: npm publish
+    needs: npm-dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-release
+    if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Publish package
+        run: pnpm --dir packages/shipkit publish --access public --provenance --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

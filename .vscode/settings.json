@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "dprint.dprint",
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "dprint.path": "node_modules/.bin/dprint",
+  "eslint.enable": false,
+  "oxc.enable": true,
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.check.command": "clippy",
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
