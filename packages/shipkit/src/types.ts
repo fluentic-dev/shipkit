@@ -62,7 +62,45 @@ export type NativeEvent = {
   data?: unknown;
 };
 
+export type NativeRequest =
+  | {
+    code: 'log';
+    data: {
+      level: NativeEvent['level'];
+      message: string;
+      data?: unknown;
+    };
+  }
+  | {
+    code: 'read_expo_config';
+    data: {
+      appDir: string;
+      env: string;
+      name: string;
+      platform: Platform;
+      envs: Record<string, EnvValue>;
+    };
+  }
+  | {
+    code: 'confirm';
+    data: {
+      message: string;
+      defaultValue?: boolean;
+    };
+  };
+
+export type NativeResponse =
+  | {
+    ok: true;
+    data?: unknown;
+  }
+  | {
+    ok: false;
+    error: string;
+  };
+
 export type NativeEventSink = (event: NativeEvent) => void;
+export type NativeRequestHandler = (requestJson: string) => string;
 
 export type NativeLicenseInput = {
   licenseKey: string;
@@ -88,7 +126,7 @@ export type NativeBuildInput = {
 };
 
 export type NativeBinding = {
-  activateLicense(inputJson: string, onEvent: NativeEventSink): string;
-  runCommand(inputJson: string, onEvent: NativeEventSink): string;
-  runBuild(inputJson: string, onEvent: NativeEventSink): string;
+  activateLicense(inputJson: string, onRequest: NativeRequestHandler): string;
+  runCommand(inputJson: string, onRequest: NativeRequestHandler): string;
+  runBuild(inputJson: string, onRequest: NativeRequestHandler): string;
 };

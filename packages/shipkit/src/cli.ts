@@ -4,6 +4,7 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { loadShipkitConfig } from './config.js';
 import { printEvent, printHeader } from './logger.js';
+import { createNativeRequestHandler } from './native-bridge.js';
 import { loadNative } from './native.js';
 import type {
   Artifact,
@@ -14,6 +15,7 @@ import type {
 } from './types.js';
 
 const native = loadNative();
+const nativeRequestHandler = createNativeRequestHandler(printEvent);
 
 function appDirFromArgs(cwd: string, appDir?: string) {
   return path.resolve(cwd, appDir ?? process.cwd());
@@ -200,7 +202,7 @@ const licenseCommand = defineCommand({
       run({ args }) {
         printHeader('Shipkit License');
         runNativeJson(
-          (input) => native.activateLicense(input, printEvent),
+          (input) => native.activateLicense(input, nativeRequestHandler),
           {
             homeDir: os.homedir(),
             licenseKey: args.key
@@ -216,7 +218,7 @@ const licenseCommand = defineCommand({
       run() {
         printHeader('Shipkit License');
         runNativeJson(
-          (input) => native.runCommand(input, printEvent),
+          (input) => native.runCommand(input, nativeRequestHandler),
           {
             appDir: process.cwd(),
             command: 'license-status',
@@ -317,7 +319,7 @@ const buildCommand = defineCommand({
           input.licenseKey = args.license;
         }
 
-        runNativeJson((json) => native.runBuild(json, printEvent), input);
+        runNativeJson((json) => native.runBuild(json, nativeRequestHandler), input);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -348,7 +350,7 @@ const mainCommand = defineCommand({
       run({ args }) {
         printHeader('Shipkit Doctor');
         runNativeJson(
-          (input) => native.runCommand(input, printEvent),
+          (input) => native.runCommand(input, nativeRequestHandler),
           {
             appDir: appDirFromArgs(process.cwd(), args.appDir),
             command: 'doctor',

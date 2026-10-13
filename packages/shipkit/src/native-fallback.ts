@@ -4,14 +4,36 @@ import type {
   NativeBinding,
   NativeBuildInput,
   NativeCommandInput,
-  NativeEventSink,
   NativeLicenseInput
 } from './types.js';
 
 const allowedLicense = 'SHIPKIT-DEV-ALLOW';
 
-function emit(onEvent: NativeEventSink, message: string, data?: unknown) {
-  onEvent({ level: 'info', message, data });
+function request(onRequest: (requestJson: string) => string, code: string, data: unknown) {
+  const response = JSON.parse(onRequest(JSON.stringify({ code, data }))) as {
+    ok: boolean;
+    data?: unknown;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(response.error ?? `Native callback failed for ${code}.`);
+  }
+
+  return response.data;
+}
+
+function emit(
+  onRequest: (requestJson: string) => string,
+  level: 'debug' | 'info' | 'warn' | 'error' | 'success',
+  message: string,
+  data?: unknown
+) {
+  request(onRequest, 'log', {
+    data,
+    level,
+    message
+  });
 }
 
 function licenseFile(homeDir: string) {
@@ -35,7 +57,7 @@ function assertLicense(homeDir: string, licenseKey?: string) {
 }
 
 export const fallbackNative: NativeBinding = {
-  activateLicense(inputJson, onEvent) {
+  activateLicense(inputJson, onRequest) {
     const input = JSON.parse(inputJson) as NativeLicenseInput;
 
     if (input.licenseKey !== allowedLicense) {
@@ -57,50 +79,50 @@ export const fallbackNative: NativeBinding = {
       )
     );
 
-    onEvent({ level: 'success', message: 'License activated with development placeholder.' });
+    emit(onRequest, 'success', 'License activated with development placeholder.');
     return JSON.stringify({ ok: true });
   },
 
-  runCommand(inputJson, onEvent) {
+  runCommand(inputJson, onRequest) {
     const input = JSON.parse(inputJson) as NativeCommandInput;
 
     if (input.command === 'license-status') {
       const license = readLicense(input.homeDir);
-      onEvent({
-        level: license?.licenseKey === allowedLicense ? 'success' : 'warn',
-        message: license?.licenseKey === allowedLicense
+      emit(
+        onRequest,
+        license?.licenseKey === allowedLicense ? 'success' : 'warn',
+        license?.licenseKey === allowedLicense
           ? 'Development license is active.'
           : 'No valid license is active.'
-      });
+      );
       return JSON.stringify({ ok: true, active: license?.licenseKey === allowedLicense });
     }
 
-    emit(onEvent, 'Shipkit native fallback is reachable.');
-    emit(onEvent, `App directory: ${input.appDir}`);
+    emit(onRequest, 'info', 'Shipkit native fallback is reachable.');
+    emit(onRequest, 'info', `App directory: ${input.appDir}`);
     return JSON.stringify({ ok: true });
   },
 
-  runBuild(inputJson, onEvent) {
+  runBuild(inputJson, onRequest) {
     const input = JSON.parse(inputJson) as NativeBuildInput;
     assertLicense(input.homeDir, input.licenseKey);
 
     const variant = input.config.variants.find((item) => item.name === input.name);
     if (!variant) throw new Error(`Unknown Shipkit build variant: ${input.name}`);
 
-    onEvent({ level: 'info', message: 'License accepted.' });
-    onEvent({
-      level: 'info',
-      message: `Planning ${input.platform} ${input.artifact} build for ${input.name}.`,
-      data: variant
-    });
-    onEvent({
-      level: 'warn',
-      message: 'Rust addon is not built; this is the development JS fallback.'
-    });
-    onEvent({
-      level: 'success',
-      message: input.dryRun ? 'Dry run complete.' : 'Placeholder build complete.'
-    });
+    emit(onRequest, 'info', 'License accepted.');
+    emit(
+      onRequest,
+      'info',
+      `Planning ${input.platform} ${input.artifact} build for ${input.name}.`,
+      variant
+    );
+    emit(onRequest, 'warn', 'Rust addon is not built; this is the development JS fallback.');
+    emit(
+      onRequest,
+      'success',
+      input.dryRun ? 'Dry run complete.' : 'Placeholder build complete.'
+    );
 
     return JSON.stringify({
       ok: true,
