@@ -108,8 +108,7 @@ export type NativeLicenseInput = {
 };
 
 export type NativeCommandInput = {
-  command: 'doctor' | 'license-status';
-  appDir: string;
+  command: 'license-status';
   homeDir: string;
 };
 

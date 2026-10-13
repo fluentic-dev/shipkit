@@ -2,13 +2,15 @@ import { cancel, isCancel, password, select } from '@clack/prompts';
 import { defineCommand, runMain } from 'citty';
 import os from 'node:os';
 import path from 'node:path';
+import { getShipkitEnvSnapshot } from './config-env.js';
 import { loadShipkitConfig } from './config.js';
 import {
   printError,
   printEvent,
   printIntro,
-  printNote,
+  printListPanel,
   printOutro,
+  printPanel,
   startSpinner
 } from './logger.js';
 import { createNativeRequestHandler } from './native-bridge.js';
@@ -30,6 +32,19 @@ function appDirFromArgs(cwd: string, appDir?: string) {
 
 function configPathFromArgs(appDir: string, config?: string) {
   return path.resolve(appDir, config ?? 'build.config.ts');
+}
+
+async function loadBuildManifest(configPath: string) {
+  const loadTask = startSpinner('Resolving build config');
+
+  try {
+    const config = await loadShipkitConfig(configPath);
+    loadTask.clear();
+    return config;
+  } catch (error) {
+    loadTask.error('Build config failed');
+    throw error;
+  }
 }
 
 function runNativeJson(fn: (input: string) => string, input: unknown) {
@@ -121,6 +136,18 @@ async function resolveLicenseKey(key?: string) {
 
 function listVariants(config: BuildManifest) {
   return config.variants.map((item) => item.name).join(', ');
+}
+
+function findBuildVariant(config: BuildManifest, name?: string) {
+  if (!name) return null;
+  const match = config.variants.find((item) => item.name === name);
+  if (!match) {
+    throw new Error(
+      `Unknown build variant "${name}". Available variants: ${listVariants(config)}.`
+    );
+  }
+
+  return match;
 }
 
 function resolveArtifacts(
@@ -215,6 +242,52 @@ function objectEntries<T extends Record<string, boolean>>(value: T) {
   return Object.entries(value) as Array<[keyof T & Artifact, boolean]>;
 }
 
+function formatPlatform(platform: Platform) {
+  return platform === 'ios' ? 'iOS' : 'Android';
+}
+
+function formatTargets(platform: Platform | null, variant: ResolvedBuildVariantConfig) {
+  const targets: string[] = [];
+  if (platform !== 'ios' && variant.apk) targets.push('apk');
+  if (platform !== 'ios' && variant.aab) targets.push('aab');
+  if (platform !== 'android' && variant.ipa) targets.push('ipa');
+  return targets.join(', ') || 'none';
+}
+
+function formatFileName(variant: ResolvedBuildVariantConfig) {
+  return variant.fileName.replaceAll('[env]', variant.env);
+}
+
+function formatOutputNames(variant: ResolvedBuildVariantConfig, artifacts: Artifact[]) {
+  const baseName = formatFileName(variant);
+  return artifacts.map((artifact) => `${baseName}.${artifact}`).join(', ');
+}
+
+function formatPathForDisplay(filePath: string) {
+  return path.relative(process.cwd(), filePath) || '.';
+}
+
+function formatEnvEntries(envs: Record<string, unknown>) {
+  return Object.entries(envs)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, value]) => `${name}=${formatEnvValue(name, value)}`);
+}
+
+function formatEnvValue(name: string, value: unknown) {
+  const text = String(value);
+  if (/TOKEN|SECRET|PASSWORD|PASS|KEY|CERT|PROFILE|LICENSE/u.test(name)) {
+    return text.length <= 4 ? '••••' : `${text.slice(0, 2)}••••${text.slice(-2)}`;
+  }
+
+  return text;
+}
+
+function parseOptionalPlatform(input: unknown): Platform | null {
+  if (input === undefined) return null;
+  if (input === 'android' || input === 'ios') return input;
+  throw new Error('Platform must be android or ios.');
+}
+
 const licenseCommand = defineCommand({
   meta: {
     name: 'license',
@@ -256,7 +329,6 @@ const licenseCommand = defineCommand({
         const result = runNativeJson(
           (input) => native.runCommand(input, nativeRequestHandler),
           {
-            appDir: process.cwd(),
             command: 'license-status',
             homeDir: os.homedir()
           }
@@ -324,18 +396,9 @@ const buildCommand = defineCommand({
 
       const appDir = appDirFromArgs(process.cwd(), args.appDir);
       const configPath = configPathFromArgs(appDir, args.config);
-      printIntro(`Shipkit ${platform}`);
+      printIntro(formatPlatform(platform), 'build');
 
-      const loadTask = startSpinner('Loading build configuration');
-      let config: BuildManifest;
-      try {
-        config = await loadShipkitConfig(configPath);
-        loadTask.stop('Build configuration ready');
-      } catch (error) {
-        loadTask.error('Build configuration failed');
-        throw error;
-      }
-
+      const config = await loadBuildManifest(configPath);
       const selected = await selectBuildVariant(config, args.env);
       const artifacts = resolveArtifacts(platform, selected, args);
 
@@ -343,11 +406,13 @@ const buildCommand = defineCommand({
         throw new Error(`No ${platform} build targets are enabled for variant "${selected.name}".`);
       }
 
-      printNote('Build', [
-        `Variant  ${selected.name}`,
-        `Env      ${selected.env}`,
-        `Targets  ${artifacts.join(', ')}`,
-        `App      ${path.relative(process.cwd(), appDir) || '.'}`
+      printPanel('Build', [
+        { label: 'Platform', value: formatPlatform(platform) },
+        { label: 'Variant', value: selected.name },
+        { label: 'Env', value: selected.env },
+        { label: 'Targets', value: artifacts.join(', ') },
+        { label: 'App', value: formatPathForDisplay(appDir) },
+        { label: 'Output', value: formatOutputNames(selected, artifacts) }
       ]);
 
       let failed = false;
@@ -387,6 +452,92 @@ const buildCommand = defineCommand({
   }
 });
 
+const infoCommand = defineCommand({
+  meta: {
+    name: 'info',
+    description: 'Show Shipkit build configuration and env context.'
+  },
+  args: {
+    platform: {
+      type: 'positional',
+      description: 'Optional target platform.',
+      required: false,
+      valueHint: 'android|ios'
+    },
+    env: {
+      type: 'positional',
+      description: 'Optional build variant name from build.config.ts.',
+      required: false
+    },
+    appDir: {
+      type: 'string',
+      description: 'Expo app directory.'
+    },
+    config: {
+      type: 'string',
+      description: 'Build config path relative to app dir.'
+    }
+  },
+  async run({ args }) {
+    try {
+      const platform = parseOptionalPlatform(args.platform);
+      const appDir = appDirFromArgs(process.cwd(), args.appDir);
+      const configPath = configPathFromArgs(appDir, args.config);
+
+      printIntro('Info');
+
+      const config = await loadBuildManifest(configPath);
+      const selected = findBuildVariant(config, args.env);
+      const variants = selected ? [selected] : config.variants;
+      const envSnapshot = getShipkitEnvSnapshot();
+      const loadedEnvEntries = [
+        ...Object.entries(envSnapshot.normal).map(([name, value]) => ({
+          forced: false,
+          name,
+          value
+        })),
+        ...Object.entries(envSnapshot.forced).map(([name, value]) => ({
+          forced: true,
+          name,
+          value
+        }))
+      ].sort((left, right) => left.name.localeCompare(right.name));
+      const appEnvEntries = variants.flatMap((variant) =>
+        formatEnvEntries(variant.envs).map((entry) => `${variant.name}: ${entry}`)
+      );
+
+      printPanel('Project', [
+        { label: 'App', value: formatPathForDisplay(appDir) },
+        { label: 'Config', value: formatPathForDisplay(configPath) },
+        { label: 'Platform', value: platform ? formatPlatform(platform) : 'all' },
+        { label: 'Prebuild env', value: process.env.SHIPKIT_ENV ?? process.env.ENV ?? 'not set' }
+      ]);
+
+      printListPanel(
+        'Variants',
+        variants.map((variant) =>
+          `${variant.name}  env=${variant.env}  targets=${formatTargets(platform, variant)}  file=${
+            formatFileName(variant)
+          }`
+        )
+      );
+
+      printListPanel(
+        'Loaded envs',
+        loadedEnvEntries.map((entry) =>
+          `${entry.name}${entry.forced ? '!' : ''}=${formatEnvValue(entry.name, entry.value)}`
+        )
+      );
+
+      printListPanel('App envs', appEnvEntries);
+      printOutro('Shipkit info complete.');
+    } catch (error) {
+      printError(error);
+      process.exitCode = 1;
+    }
+  }
+});
+
 const mainCommand = defineCommand({
   meta: {
     name: 'shipkit',
@@ -394,30 +545,7 @@ const mainCommand = defineCommand({
   },
   subCommands: {
     build: buildCommand,
-    doctor: defineCommand({
-      meta: {
-        name: 'doctor',
-        description: 'Check that the native bridge can run.'
-      },
-      args: {
-        appDir: {
-          type: 'string',
-          description: 'Expo app directory.'
-        }
-      },
-      run({ args }) {
-        printIntro('Shipkit Doctor');
-        const result = runNativeJson(
-          (input) => native.runCommand(input, nativeRequestHandler),
-          {
-            appDir: appDirFromArgs(process.cwd(), args.appDir),
-            command: 'doctor',
-            homeDir: os.homedir()
-          }
-        );
-        if (result) printOutro('Shipkit is ready.');
-      }
-    }),
+    info: infoCommand,
     license: licenseCommand
   }
 });

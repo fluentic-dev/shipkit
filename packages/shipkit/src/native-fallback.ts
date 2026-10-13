@@ -98,9 +98,7 @@ export const fallbackNative: NativeBinding = {
       return JSON.stringify({ ok: true, active: license?.licenseKey === allowedLicense });
     }
 
-    emit(onRequest, 'info', 'Shipkit native fallback is reachable.');
-    emit(onRequest, 'info', `App directory: ${input.appDir}`);
-    return JSON.stringify({ ok: true });
+    throw new Error(`Unknown Shipkit native command: ${input.command}`);
   },
 
   runBuild(inputJson, onRequest) {

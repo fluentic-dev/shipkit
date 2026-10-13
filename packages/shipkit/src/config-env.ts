@@ -38,6 +38,15 @@ export function clearShipkitEnv() {
   envSource.normal.clear();
 }
 
+export function getShipkitEnvSnapshot() {
+  const envSource = source();
+
+  return {
+    forced: Object.fromEntries(envSource.forced),
+    normal: Object.fromEntries(envSource.normal)
+  };
+}
+
 export function env(name: string): string;
 export function env(name: string, defaultValue: string): string;
 export function env(name: string, defaultValue: null): string | null;
