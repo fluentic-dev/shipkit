@@ -118,11 +118,7 @@ export const fallbackNative: NativeBinding = {
       variant
     );
     emit(onRequest, 'warn', 'Rust addon is not built; this is the development JS fallback.');
-    emit(
-      onRequest,
-      'success',
-      input.dryRun ? 'Dry run complete.' : 'Placeholder build complete.'
-    );
+    emit(onRequest, 'success', 'Placeholder build complete.');
 
     return JSON.stringify({
       ok: true,

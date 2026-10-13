@@ -122,7 +122,6 @@ export type NativeBuildInput = {
   config: BuildManifest;
   licenseKey?: string;
   homeDir: string;
-  dryRun?: boolean;
 };
 
 export type NativeBinding = {

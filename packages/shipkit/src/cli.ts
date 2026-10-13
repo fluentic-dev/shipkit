@@ -43,6 +43,13 @@ function runNativeJson(fn: (input: string) => string, input: unknown) {
   }
 }
 
+function assertNoRemovedBuildFlags(argv: string[]) {
+  const dryRunFlag = argv.find((arg) => /^--dry-?run(?:=.*)?$/i.test(arg));
+  if (dryRunFlag) {
+    throw new Error(`${dryRunFlag} was removed. Shipkit build now always runs the build.`);
+  }
+}
+
 async function selectBuildVariant(config: BuildManifest, name?: string) {
   if (name) {
     const match = config.variants.find((item) => item.name === name);
@@ -301,10 +308,6 @@ const buildCommand = defineCommand({
       type: 'string',
       description: 'Build one target: apk, aab, or ipa.'
     },
-    dryRun: {
-      type: 'boolean',
-      description: 'Plan the build without running native commands.'
-    },
     license: {
       type: 'string',
       description: 'License key override. Usually use shipkit license activate.'
@@ -316,6 +319,8 @@ const buildCommand = defineCommand({
       if (platform !== 'android' && platform !== 'ios') {
         throw new Error('Platform must be android or ios.');
       }
+
+      assertNoRemovedBuildFlags(process.argv);
 
       const appDir = appDirFromArgs(process.cwd(), args.appDir);
       const configPath = configPathFromArgs(appDir, args.config);
@@ -352,7 +357,6 @@ const buildCommand = defineCommand({
           appDir,
           artifact,
           config,
-          dryRun: Boolean(args.dryRun),
           env: selected.env,
           homeDir: os.homedir(),
           name: selected.name,
