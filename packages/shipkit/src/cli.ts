@@ -78,6 +78,10 @@ function assertNoRemovedBuildFlags(argv: string[]) {
   }
 }
 
+function shouldRunPrebuild(argv: string[]) {
+  return !argv.some((arg) => /^--no-?prebuild(?:=.*)?$/i.test(arg));
+}
+
 async function selectBuildVariant(config: BuildManifest, name?: string) {
   if (name) {
     const match = config.variants.find((item) => item.name === name);
@@ -458,6 +462,10 @@ const buildCommand = defineCommand({
       type: 'string',
       description: 'Native logs display: auto, expanded, or collapsed.'
     },
+    'no-prebuild': {
+      type: 'boolean',
+      description: 'Reuse an available native prebuild for this run.'
+    },
     license: {
       type: 'string',
       description: 'License key override. Usually use shipkit license activate.'
@@ -483,6 +491,7 @@ const buildCommand = defineCommand({
       const selected = await selectBuildVariant(config, args.env);
       const artifacts = resolveArtifacts(platform, selected, args);
       const nativeLogMode = parseNativeLogMode(args.logs);
+      const prebuild = shouldRunPrebuild(process.argv);
 
       if (artifacts.length === 0) {
         throw new Error(`No ${platform} build targets are enabled for variant "${selected.name}".`);
@@ -499,7 +508,7 @@ const buildCommand = defineCommand({
 
       let failed = false;
 
-      for (const artifact of artifacts) {
+      for (const [index, artifact] of artifacts.entries()) {
         const input: NativeBuildInput = {
           appDir,
           artifact,
@@ -507,7 +516,8 @@ const buildCommand = defineCommand({
           env: selected.env,
           homeDir: os.homedir(),
           name: selected.name,
-          platform
+          platform,
+          prebuild: prebuild && index === 0
         };
 
         if (args.license) {

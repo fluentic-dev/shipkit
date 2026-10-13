@@ -41,9 +41,9 @@ export function printPanel(title: string, rows: PanelRow[]) {
 
   const labelWidth = Math.max(...visibleRows.map((row) => visibleWidth(row.label)), 1);
   const valueWidth = Math.max(...visibleRows.map((row) => visibleWidth(row.value)), 1);
-  const innerWidth = Math.max(28, labelWidth + valueWidth + 5, visibleWidth(title) + 4);
-  const topTail = '─'.repeat(Math.max(innerWidth - visibleWidth(title) - 1, 1));
-  const horizontal = '─'.repeat(innerWidth + 2);
+  const contentWidth = Math.max(28, labelWidth + valueWidth + 2, visibleWidth(title) + 2);
+  const topTail = '─'.repeat(Math.max(contentWidth - visibleWidth(title), 1));
+  const horizontal = '─'.repeat(contentWidth + 2);
 
   const lines = [
     `${styleText('green', '╭')} ${styleText(['bold', 'green'], title)} ${
@@ -53,8 +53,8 @@ export function printPanel(title: string, rows: PanelRow[]) {
       const label = padVisible(row.label, labelWidth);
       const value = padVisible(row.value, valueWidth);
       const content = `${styleText('dim', label)}  ${styleText('bold', value)}`;
-      const padding = ' '.repeat(Math.max(innerWidth - labelWidth - valueWidth - 2, 1));
-      return `${styleText('green', '│')} ${content}${padding}${styleText('green', '│')}`;
+      const padding = ' '.repeat(Math.max(contentWidth - visibleWidth(content), 0));
+      return `${styleText('green', '│')} ${content}${padding} ${styleText('green', '│')}`;
     }),
     `${styleText('green', '╰')}${styleText('green', horizontal)}${styleText('green', '╯')}`
   ];
@@ -309,9 +309,14 @@ function phaseFromNativeEvent(message: string) {
   const phases: Record<string, string> = {
     'android.prepare_signing': 'Preparing Android signing',
     'android.reset_release_outputs': 'Cleaning Android release outputs',
+    'expo.prebuild': 'Running Expo prebuild',
     'gradle.build': 'Running Gradle',
     'ios.prepare_keychain': 'Preparing iOS keychain',
     'ios.install_profiles': 'Installing provisioning profiles',
+    'prebuild.ready': 'Prebuild ready',
+    'prebuild.restore': 'Restoring cached prebuild',
+    'prebuild.save': 'Saving current prebuild',
+    'prebuild.skip': 'Using existing prebuild',
     'security.create_keychain': 'Creating iOS keychain',
     'security.delete_keychain': 'Cleaning iOS keychain',
     'security.import_certificate': 'Importing signing certificate',

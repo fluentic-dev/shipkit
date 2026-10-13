@@ -130,6 +130,7 @@ export type NativeBuildInput = {
   platform: Platform;
   artifact: Artifact;
   config: BuildManifest;
+  prebuild?: boolean;
   licenseKey?: string;
   homeDir: string;
 };
