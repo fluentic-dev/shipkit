@@ -1,4 +1,5 @@
 export { main } from './cli.js';
+export { defineConfig } from './config.js';
 export type {
   NativeBuildInput,
   NativeCommandInput,

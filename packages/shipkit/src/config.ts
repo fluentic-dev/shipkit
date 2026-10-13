@@ -1,6 +1,10 @@
 import { pathToFileURL } from 'node:url';
 import type { ShipkitConfig } from './types.js';
 
+export function defineConfig(config: ShipkitConfig): ShipkitConfig {
+  return config;
+}
+
 export async function loadShipkitConfig(configPath: string): Promise<ShipkitConfig> {
   const configUrl = pathToFileURL(configPath).href;
   const mod = await import(configUrl);

@@ -1,6 +1,6 @@
-import type { ShipkitConfig } from '@fluentic/shipkit';
+import { defineConfig } from '@fluentic/shipkit';
 
-const config: ShipkitConfig = {
+export default defineConfig({
   envs: {
     demo: {
       app: 'shipkit-example',
@@ -34,6 +34,4 @@ const config: ShipkitConfig = {
       }
     }
   }
-};
-
-export default config;
+});
