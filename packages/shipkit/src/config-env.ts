@@ -40,15 +40,22 @@ export function clearShipkitEnv() {
 
 export function env(name: string): string;
 export function env(name: string, defaultValue: string): string;
+export function env(name: string, defaultValue: null): string | null;
 export function env(name: string, converter: BooleanConstructor): boolean;
 export function env(name: string, converter: BooleanConstructor, defaultValue: boolean): boolean;
-export function env(name: string, converter: NumberConstructor): number;
-export function env(name: string, converter: NumberConstructor, defaultValue: number): number;
 export function env(
   name: string,
-  converterOrDefault?: string | BooleanConstructor | NumberConstructor,
-  defaultValue?: boolean | number
-): string | boolean | number {
+  converter: BooleanConstructor,
+  defaultValue: null
+): boolean | null;
+export function env(name: string, converter: NumberConstructor): number;
+export function env(name: string, converter: NumberConstructor, defaultValue: number): number;
+export function env(name: string, converter: NumberConstructor, defaultValue: null): number | null;
+export function env(
+  name: string,
+  converterOrDefault?: string | null | BooleanConstructor | NumberConstructor,
+  defaultValue?: boolean | number | null
+): string | boolean | number | null {
   const rawValue = readShipkitEnvValue(name);
   const fallback = resolveEnvDefault(converterOrDefault, defaultValue);
 
@@ -113,7 +120,7 @@ function readShipkitEnvValue(name: string) {
 function convertEnvValue(
   name: string,
   value: string,
-  converterOrDefault?: string | BooleanConstructor | NumberConstructor
+  converterOrDefault?: string | null | BooleanConstructor | NumberConstructor
 ) {
   if (converterOrDefault === Boolean) {
     if (value === 'true' || value === '1') return true;
@@ -133,10 +140,13 @@ function convertEnvValue(
 }
 
 function resolveEnvDefault(
-  converterOrDefault?: string | BooleanConstructor | NumberConstructor,
-  defaultValue?: boolean | number
+  converterOrDefault?: string | null | BooleanConstructor | NumberConstructor,
+  defaultValue?: boolean | number | null
 ) {
-  if (typeof converterOrDefault === 'string') return converterOrDefault;
+  if (typeof converterOrDefault === 'string' || converterOrDefault === null) {
+    return converterOrDefault;
+  }
+
   return defaultValue;
 }
 
