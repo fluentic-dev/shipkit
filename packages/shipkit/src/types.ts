@@ -32,7 +32,7 @@ export type BuildConfig = {
   fileName?: string;
   envs?: Record<string, EnvValue>;
   apk?: boolean;
-  abb?: boolean;
+  aab?: boolean;
   ipa?: boolean;
   credentials?: BuildCredentials;
 };
@@ -47,7 +47,7 @@ export type ResolvedBuildVariantConfig = BuildVariantConfig & {
   fileName: string;
   envs: Record<string, EnvValue>;
   apk: boolean;
-  abb: boolean;
+  aab: boolean;
   ipa: boolean;
 };
 

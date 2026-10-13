@@ -73,12 +73,12 @@ export default [
   defineVariant(myapp, {
     name: 'myapp_staging',
     env: 'staging',
-    abb: false,
+    aab: false,
     envs: {
       ANOTHER: env('ANOTHER_FIELD_IN_FILE')
     }
   }),
-  defineVariant(myapp, { name: 'myapp_production', env: 'production', abb: false }),
-  defineVariant(myapp2, { name: 'myapp2_staging', env: 'staging', abb: false }),
-  defineVariant(myapp2, { name: 'myapp2_production', env: 'production', abb: false })
+  defineVariant(myapp, { name: 'myapp_production', env: 'production', aab: false }),
+  defineVariant(myapp2, { name: 'myapp2_staging', env: 'staging', aab: false }),
+  defineVariant(myapp2, { name: 'myapp2_production', env: 'production', aab: false })
 ];

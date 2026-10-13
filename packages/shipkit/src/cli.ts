@@ -141,11 +141,11 @@ function resolveAndroidArtifacts(
 ): Artifact[] {
   const targets = {
     apk: variant.apk,
-    aab: variant.abb
+    aab: variant.aab
   };
 
   applyBooleanOverride(targets, 'apk', args.apk);
-  applyBooleanOverride(targets, 'aab', args.aab ?? args.abb);
+  applyBooleanOverride(targets, 'aab', args.aab);
 
   return objectEntries(targets)
     .filter(([, enabled]) => enabled)
@@ -167,9 +167,8 @@ function resolveIosArtifacts(
 
 function normalizeTarget(target: string | undefined): Artifact | null {
   if (!target) return null;
-  if (target === 'abb') return 'aab';
   if (target === 'apk' || target === 'aab' || target === 'ipa') return target;
-  throw new Error(`Invalid target "${target}". Expected apk, aab, abb, or ipa.`);
+  throw new Error(`Invalid target "${target}". Expected apk, aab, or ipa.`);
 }
 
 function assertPlatformTarget(platform: Platform, target: Artifact) {
@@ -294,17 +293,13 @@ const buildCommand = defineCommand({
       type: 'string',
       description: 'Override Android AAB target. Use true or false.'
     },
-    abb: {
-      type: 'string',
-      description: 'Alias for --aab.'
-    },
     ipa: {
       type: 'string',
       description: 'Override iOS IPA target. Use true or false.'
     },
     target: {
       type: 'string',
-      description: 'Build one target: apk, aab, abb, or ipa.'
+      description: 'Build one target: apk, aab, or ipa.'
     },
     dryRun: {
       type: 'boolean',

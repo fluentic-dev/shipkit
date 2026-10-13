@@ -65,7 +65,7 @@ function normalizeVariant(input: unknown, index: number): ResolvedBuildVariantCo
 
   return {
     ...variant,
-    abb: variant.abb ?? true,
+    aab: variant.aab ?? true,
     apk: variant.apk ?? true,
     env,
     envs: variant.envs ?? {},
