@@ -1,36 +1,31 @@
 export type ShipkitPlatform = 'android' | 'ios';
 export type ShipkitArtifact = 'apk' | 'aab' | 'ipa';
 
-export type ShipkitAndroidConfig = {
-  applicationId?: string;
-  versionCode?: number;
-  keystore?: {
-    path: string;
-    storePassword: string;
-    keyAlias: string;
-    keyPassword: string;
+export type ShipkitCredentials = {
+  android: {
+    keystore: {
+      path: string;
+      storePassword: string;
+      keyAlias: string;
+      keyPassword: string;
+    };
   };
-};
-
-export type ShipkitIosConfig = {
-  bundleIdentifier?: string;
-  buildNumber?: string;
-  teamId?: string;
-  certificate?: {
-    path: string;
-    password: string;
+  ios: {
+    teamId?: string;
+    certificate?: {
+      path: string;
+      password: string;
+    };
+    profiles?: Record<string, string>;
   };
-  profiles?: Record<string, string>;
 };
 
 export type ShipkitEnvConfig = {
-  app?: string;
-  profile?: string;
-  displayName?: string;
-  outputName?: string;
-  extra?: Record<string, unknown>;
-  android?: ShipkitAndroidConfig;
-  ios?: ShipkitIosConfig;
+  fileName?: string;
+  apk?: boolean;
+  aab?: boolean;
+  adjustEnv?: string;
+  credentials?: ShipkitCredentials;
 };
 
 export type ShipkitConfig = {
