@@ -84,14 +84,14 @@ export const fallbackNative: NativeBinding = {
     const input = JSON.parse(inputJson) as NativeBuildInput;
     assertLicense(input.homeDir, input.licenseKey);
 
-    const envConfig = input.config.config.find((item) => item.env === input.env)?.config.config;
-    if (!envConfig) throw new Error(`Unknown Shipkit env: ${input.env}`);
+    const variant = input.config.variants.find((item) => item.name === input.name);
+    if (!variant) throw new Error(`Unknown Shipkit build variant: ${input.name}`);
 
     onEvent({ level: 'info', message: 'License accepted.' });
     onEvent({
       level: 'info',
-      message: `Planning ${input.platform} ${input.artifact} build for ${input.env}.`,
-      data: envConfig
+      message: `Planning ${input.platform} ${input.artifact} build for ${input.name}.`,
+      data: variant
     });
     onEvent({
       level: 'warn',
@@ -106,6 +106,7 @@ export const fallbackNative: NativeBinding = {
       ok: true,
       mode: 'development-fallback',
       env: input.env,
+      name: input.name,
       platform: input.platform,
       artifact: input.artifact
     });

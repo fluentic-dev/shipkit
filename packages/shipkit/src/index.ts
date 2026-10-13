@@ -1,15 +1,18 @@
 export { main } from './cli.js';
-export { defineConfig, defineEnvs } from './config.js';
+export { env } from './config-env.js';
+export { defineBuild, defineConfig, defineVariant, defineVariants } from './config.js';
 export type {
   Artifact,
   BuildConfig,
-  BuildConfigOptions,
   BuildCredentials,
-  MultiEnvBuildConfig,
+  BuildManifest,
+  BuildVariantConfig,
+  EnvValue,
   NativeBuildInput,
   NativeCommandInput,
   NativeEvent,
   NativeEventSink,
   NativeLicenseInput,
-  Platform
+  Platform,
+  ResolvedBuildVariantConfig
 } from './types.js';

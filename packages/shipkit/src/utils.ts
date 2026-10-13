@@ -1,18 +1,21 @@
-import type { BuildConfigOptions } from './types.js';
+import type { EnvValue } from './types.js';
 
 export type ShipkitRuntimeEnv = {
+  name?: string;
   env?: string;
-  profile?: string;
   platform?: string;
+  envs?: Record<string, EnvValue>;
 };
 
-export function runtimeEnvFromProcess(envConfig?: BuildConfigOptions): ShipkitRuntimeEnv {
+export function runtimeEnvFromProcess(): ShipkitRuntimeEnv {
   const env: ShipkitRuntimeEnv = {};
-  const profile = process.env.SHIPKIT_PROFILE ?? envConfig?.adjustEnv;
 
+  if (process.env.SHIPKIT_NAME) env.name = process.env.SHIPKIT_NAME;
   if (process.env.SHIPKIT_ENV) env.env = process.env.SHIPKIT_ENV;
   if (process.env.SHIPKIT_PLATFORM) env.platform = process.env.SHIPKIT_PLATFORM;
-  if (profile) env.profile = profile;
+  if (process.env.SHIPKIT_ENVS) {
+    env.envs = JSON.parse(process.env.SHIPKIT_ENVS) as Record<string, EnvValue>;
+  }
 
   return env;
 }

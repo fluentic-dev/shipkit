@@ -13,15 +13,24 @@ try {
   constants = null;
 }
 
-export const shipkitEnv = (
+import type { EnvValue } from './types.js';
+
+export type BuildInfo = {
+  name?: string;
+  env?: string;
+  platform?: string;
+  envs?: Record<string, EnvValue>;
+};
+
+export const buildInfo = (
   constants?.expoConfig?.extra?.shipkit
     ?? constants?.manifest2?.extra?.expoClient?.extra?.shipkit
     ?? constants?.manifest?.extra?.shipkit
     ?? {}
-) as {
-  env?: string;
-  app?: string;
-  profile?: string;
-  platform?: string;
-  extra?: Record<string, unknown>;
-};
+) as BuildInfo;
+
+export const shipkitEnv = buildInfo;
+
+export function getBuildInfo(): BuildInfo {
+  return buildInfo;
+}

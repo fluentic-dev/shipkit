@@ -7,11 +7,10 @@ import { printEvent, printHeader } from './logger.js';
 import { loadNative } from './native.js';
 import type {
   Artifact,
-  BuildConfig,
-  BuildConfigOptions,
-  MultiEnvBuildConfig,
+  BuildManifest,
   NativeBuildInput,
-  Platform
+  Platform,
+  ResolvedBuildVariantConfig
 } from './types.js';
 
 const native = loadNative();
@@ -36,27 +35,29 @@ function runNativeJson(fn: (input: string) => string, input: unknown) {
   }
 }
 
-async function selectBuildConfig(config: MultiEnvBuildConfig, env?: string) {
-  if (env) {
-    const match = config.config.find((item) => item.env === env);
+async function selectBuildVariant(config: BuildManifest, name?: string) {
+  if (name) {
+    const match = config.variants.find((item) => item.name === name);
     if (!match) {
-      throw new Error(`Unknown build env "${env}". Available envs: ${listEnvs(config)}.`);
+      throw new Error(
+        `Unknown build variant "${name}". Available variants: ${listVariants(config)}.`
+      );
     }
 
     return match;
   }
 
-  if (config.config.length === 1) {
-    return config.config[0]!;
+  if (config.variants.length === 1) {
+    return config.variants[0]!;
   }
 
   if (!process.stdin.isTTY) {
-    throw new Error(`Build env is required. Available envs: ${listEnvs(config)}.`);
+    throw new Error(`Build variant is required. Available variants: ${listVariants(config)}.`);
   }
 
-  printHeader('Shipkit Envs');
-  config.config.forEach((item, index) => {
-    console.log(`${index + 1}. ${item.env}`);
+  printHeader('Shipkit Variants');
+  config.variants.forEach((item, index) => {
+    console.log(`${index + 1}. ${item.name}`);
   });
 
   const rl = readline.createInterface({
@@ -64,28 +65,32 @@ async function selectBuildConfig(config: MultiEnvBuildConfig, env?: string) {
     output: process.stdout
   });
 
-  const answer = (await rl.question('Select env: ')).trim();
+  const answer = (await rl.question('Select variant: ')).trim();
   rl.close();
 
   const index = Number(answer);
   const match = Number.isInteger(index)
-    ? config.config[index - 1]
-    : config.config.find((item) => item.env === answer);
+    ? config.variants[index - 1]
+    : config.variants.find((item) => item.name === answer);
 
   if (!match) {
     throw new Error(
-      `Invalid build env selection "${answer}". Available envs: ${listEnvs(config)}.`
+      `Invalid build variant selection "${answer}". Available variants: ${listVariants(config)}.`
     );
   }
 
   return match;
 }
 
-function listEnvs(config: MultiEnvBuildConfig) {
-  return config.config.map((item) => item.env).join(', ');
+function listVariants(config: BuildManifest) {
+  return config.variants.map((item) => item.name).join(', ');
 }
 
-function resolveArtifacts(platform: Platform, config: BuildConfig, args: Record<string, unknown>) {
+function resolveArtifacts(
+  platform: Platform,
+  variant: ResolvedBuildVariantConfig,
+  args: Record<string, unknown>
+) {
   const target = normalizeTarget(typeof args.target === 'string' ? args.target : undefined);
 
   if (target) {
@@ -94,21 +99,19 @@ function resolveArtifacts(platform: Platform, config: BuildConfig, args: Record<
   }
 
   if (platform === 'ios') {
-    return resolveIosArtifacts(config.config, args);
+    return resolveIosArtifacts(variant, args);
   }
 
-  return resolveAndroidArtifacts(config.config, args);
+  return resolveAndroidArtifacts(variant, args);
 }
 
 function resolveAndroidArtifacts(
-  config: BuildConfigOptions,
+  variant: ResolvedBuildVariantConfig,
   args: Record<string, unknown>
 ): Artifact[] {
-  const hasConfigTarget = config.apk !== undefined || config.aab !== undefined
-    || config.abb !== undefined;
   const targets = {
-    apk: hasConfigTarget ? config.apk === true : true,
-    aab: (config.aab ?? config.abb) === true
+    apk: variant.apk,
+    aab: variant.abb
   };
 
   applyBooleanOverride(targets, 'apk', args.apk);
@@ -120,11 +123,11 @@ function resolveAndroidArtifacts(
 }
 
 function resolveIosArtifacts(
-  config: BuildConfigOptions,
+  variant: ResolvedBuildVariantConfig,
   args: Record<string, unknown>
 ): Artifact[] {
   const targets = {
-    ipa: config.ipa ?? true
+    ipa: variant.ipa
   };
 
   applyBooleanOverride(targets, 'ipa', args.ipa);
@@ -239,7 +242,7 @@ const buildCommand = defineCommand({
     },
     env: {
       type: 'positional',
-      description: 'Build environment from build.config.ts.',
+      description: 'Build variant name from build.config.ts.',
       required: false
     },
     appDir: {
@@ -289,11 +292,11 @@ const buildCommand = defineCommand({
       const appDir = appDirFromArgs(process.cwd(), args.appDir);
       const configPath = configPathFromArgs(appDir, args.config);
       const config = await loadShipkitConfig(configPath);
-      const selected = await selectBuildConfig(config, args.env);
-      const artifacts = resolveArtifacts(platform, selected.config, args);
+      const selected = await selectBuildVariant(config, args.env);
+      const artifacts = resolveArtifacts(platform, selected, args);
 
       if (artifacts.length === 0) {
-        throw new Error(`No ${platform} build targets are enabled for env "${selected.env}".`);
+        throw new Error(`No ${platform} build targets are enabled for variant "${selected.name}".`);
       }
 
       printHeader(`Shipkit ${platform}`);
@@ -306,6 +309,7 @@ const buildCommand = defineCommand({
           dryRun: Boolean(args.dryRun),
           env: selected.env,
           homeDir: os.homedir(),
+          name: selected.name,
           platform
         };
 

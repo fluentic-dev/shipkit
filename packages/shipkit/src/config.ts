@@ -1,59 +1,82 @@
+import { dirname, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { BuildConfig, BuildConfigOptions, MultiEnvBuildConfig } from './types.js';
+import { loadShipkitEnv } from './config-env.js';
+import type {
+  BuildConfig,
+  BuildManifest,
+  BuildVariantConfig,
+  ResolvedBuildVariantConfig
+} from './types.js';
 
-type BuildConfigInput = BuildConfig | BuildConfigOptions;
-
-export function defineConfig(...configs: BuildConfigOptions[]): BuildConfig {
-  return {
-    type: 'config',
-    config: deepMergeAll(configs)
-  };
+export function defineConfig(...configs: BuildConfig[]): BuildConfig {
+  return deepMergeAll(configs);
 }
 
-export function defineEnvs(envs: Record<string, BuildConfigInput>): MultiEnvBuildConfig {
-  return {
-    type: 'config:envs',
-    config: Object.entries(envs).map(([env, config]) => ({
-      env,
-      config: normalizeConfig(config)
-    }))
-  };
+export const defineBuild = defineConfig;
+
+export function defineVariant(
+  build: BuildConfig,
+  variant: BuildVariantConfig
+): BuildVariantConfig {
+  if (!variant.name) {
+    throw new Error('Build variant name is required.');
+  }
+
+  return deepMerge(build, variant) as BuildVariantConfig;
 }
 
-export async function loadShipkitConfig(configPath: string): Promise<MultiEnvBuildConfig> {
+export function defineVariants(variants: BuildVariantConfig[]): BuildVariantConfig[] {
+  return variants;
+}
+
+export async function loadShipkitConfig(configPath: string): Promise<BuildManifest> {
+  await loadShipkitEnv({ cwd: dirname(configPath) });
+
   const configUrl = pathToFileURL(configPath).href;
   const mod = await import(configUrl);
   const config = mod.default ?? mod.shipkit ?? mod.config ?? mod;
 
-  if (!isBuildConfig(config) && !isMultiEnvBuildConfig(config)) {
-    throw new Error(
-      `Invalid Shipkit config at ${configPath}. Expected defineConfig(...) or defineEnvs(...).`
-    );
+  return normalizeManifest(config, configPath);
+}
+
+function normalizeManifest(config: unknown, configPath: string): BuildManifest {
+  const variants = Array.isArray(config) ? config : [config];
+
+  if (variants.length === 0) {
+    throw new Error(`Invalid Shipkit config at ${relative(process.cwd(), configPath)}.`);
   }
 
-  return isMultiEnvBuildConfig(config) ? config : defineEnvs({ default: config });
+  return {
+    type: 'config:variants',
+    variants: variants.map((variant, index) => normalizeVariant(variant, index))
+  };
 }
 
-function normalizeConfig(config: BuildConfigInput): BuildConfig {
-  return isBuildConfig(config) ? config : defineConfig(config);
+function normalizeVariant(input: unknown, index: number): ResolvedBuildVariantConfig {
+  if (!isPlainObject(input)) {
+    throw new Error(`Invalid Shipkit build variant at index ${index}.`);
+  }
+
+  const variant = input as BuildVariantConfig;
+  const name = variant.name ?? 'default';
+  const env = variant.env ?? name;
+  const baseFileName = variant.fileName ?? name;
+  const fileName = baseFileName.includes('[env]') ? baseFileName : `${baseFileName}-[env]`;
+
+  return {
+    ...variant,
+    abb: variant.abb ?? true,
+    apk: variant.apk ?? true,
+    env,
+    envs: variant.envs ?? {},
+    fileName,
+    ipa: variant.ipa ?? true,
+    name
+  };
 }
 
-function isBuildConfig(config: unknown): config is BuildConfig {
-  return Boolean(
-    config && typeof config === 'object' && (config as BuildConfig).type === 'config'
-      && typeof (config as BuildConfig).config === 'object'
-  );
-}
-
-function isMultiEnvBuildConfig(config: unknown): config is MultiEnvBuildConfig {
-  return Boolean(
-    config && typeof config === 'object' && (config as MultiEnvBuildConfig).type === 'config:envs'
-      && Array.isArray((config as MultiEnvBuildConfig).config)
-  );
-}
-
-function deepMergeAll(configs: BuildConfigOptions[]): BuildConfigOptions {
-  return configs.reduce<BuildConfigOptions>((merged, config) => deepMerge(merged, config), {});
+function deepMergeAll(configs: BuildConfig[]): BuildConfig {
+  return configs.reduce<BuildConfig>((merged, config) => deepMerge(merged, config), {});
 }
 
 function deepMerge<T extends Record<string, unknown>>(left: T, right: T): T {

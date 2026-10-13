@@ -1,46 +1,59 @@
 export type Platform = 'android' | 'ios';
 export type Artifact = 'apk' | 'aab' | 'ipa';
+export type EnvValue = string | number | boolean;
 
 export type BuildCredentials = {
-  android: {
-    keystore: {
+  android?: {
+    keystore?: {
       path: string;
       storePassword: string;
       keyAlias: string;
       keyPassword: string;
     };
   };
-  ios: {
+  ios?: {
     teamId?: string;
     certificate?: {
       path: string;
       password: string;
     };
-    profiles?: Record<string, string>;
+    profile?: {
+      path: string;
+      target?: string;
+    };
+    profiles?: Array<{
+      path: string;
+      target?: string;
+    }>;
   };
 };
 
-export type BuildConfigOptions = {
+export type BuildConfig = {
   fileName?: string;
+  envs?: Record<string, EnvValue>;
   apk?: boolean;
   abb?: boolean;
-  aab?: boolean;
   ipa?: boolean;
-  adjustEnv?: string;
   credentials?: BuildCredentials;
 };
 
-export type BuildConfig = {
-  type: 'config';
-  config: BuildConfigOptions;
+export type BuildVariantConfig = BuildConfig & {
+  name: string;
+  env?: string;
 };
 
-export type MultiEnvBuildConfig = {
-  type: 'config:envs';
-  config: Array<{
-    env: string;
-    config: BuildConfig;
-  }>;
+export type ResolvedBuildVariantConfig = BuildVariantConfig & {
+  env: string;
+  fileName: string;
+  envs: Record<string, EnvValue>;
+  apk: boolean;
+  abb: boolean;
+  ipa: boolean;
+};
+
+export type BuildManifest = {
+  type: 'config:variants';
+  variants: ResolvedBuildVariantConfig[];
 };
 
 export type NativeEvent = {
@@ -64,10 +77,11 @@ export type NativeCommandInput = {
 
 export type NativeBuildInput = {
   appDir: string;
+  name: string;
   env: string;
   platform: Platform;
   artifact: Artifact;
-  config: MultiEnvBuildConfig;
+  config: BuildManifest;
   licenseKey?: string;
   homeDir: string;
   dryRun?: boolean;
