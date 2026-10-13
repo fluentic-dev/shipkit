@@ -1,4 +1,4 @@
-export { main, } from './cli.js';
+export { main } from './cli.js';
 export type {
   NativeBuildInput,
   NativeCommandInput,
@@ -6,5 +6,5 @@ export type {
   NativeEventSink,
   NativeLicenseInput,
   ShipkitConfig,
-  ShipkitEnvConfig,
+  ShipkitEnvConfig
 } from './types.js';

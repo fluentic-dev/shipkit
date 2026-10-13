@@ -5,7 +5,7 @@
   "typescript": {
     "semiColons": "always",
     "quoteStyle": "preferSingle",
-    "trailingCommas": "always"
+    "trailingCommas": "never"
   },
   "json": {},
   "markdown": {},

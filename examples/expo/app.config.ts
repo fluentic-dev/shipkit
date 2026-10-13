@@ -1,7 +1,7 @@
-import { withShipkitEnv, } from '@fluentic/shipkit/plugin';
-import type { ExpoConfig, } from 'expo/config';
+import { withShipkitEnv } from '@fluentic/shipkit/plugin';
+import type { ExpoConfig } from 'expo/config';
 
-export default ({ config, }: { config: ExpoConfig; },): ExpoConfig => {
+export default ({ config }: { config: ExpoConfig; }): ExpoConfig => {
   return withShipkitEnv({
     ...config,
     name: 'Shipkit Example',
@@ -13,7 +13,7 @@ export default ({ config, }: { config: ExpoConfig; },): ExpoConfig => {
     ios: {
       ...config.ios,
       bundleIdentifier: 'com.fluentic.shipkit.example',
-      supportsTablet: true,
+      supportsTablet: true
     },
     android: {
       ...config.android,
@@ -22,13 +22,13 @@ export default ({ config, }: { config: ExpoConfig; },): ExpoConfig => {
         backgroundColor: '#E6F4FE',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
-        monochromeImage: './assets/android-icon-monochrome.png',
+        monochromeImage: './assets/android-icon-monochrome.png'
       },
-      predictiveBackGestureEnabled: false,
+      predictiveBackGestureEnabled: false
     },
     web: {
       ...config.web,
-      favicon: './assets/favicon.png',
-    },
-  },);
+      favicon: './assets/favicon.png'
+    }
+  });
 };

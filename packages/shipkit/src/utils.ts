@@ -1,4 +1,4 @@
-import type { ShipkitEnvConfig, } from './types.js';
+import type { ShipkitEnvConfig } from './types.js';
 
 export type ShipkitRuntimeEnv = {
   env?: string;
@@ -8,7 +8,7 @@ export type ShipkitRuntimeEnv = {
   extra?: Record<string, unknown>;
 };
 
-export function runtimeEnvFromProcess(envConfig?: ShipkitEnvConfig,): ShipkitRuntimeEnv {
+export function runtimeEnvFromProcess(envConfig?: ShipkitEnvConfig): ShipkitRuntimeEnv {
   const env: ShipkitRuntimeEnv = {};
   const app = process.env.SHIPKIT_APP ?? envConfig?.app;
   const profile = process.env.SHIPKIT_PROFILE ?? envConfig?.profile;

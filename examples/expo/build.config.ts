@@ -1,4 +1,4 @@
-import type { ShipkitConfig, } from '@fluentic/shipkit';
+import type { ShipkitConfig } from '@fluentic/shipkit';
 
 const config: ShipkitConfig = {
   envs: {
@@ -8,7 +8,7 @@ const config: ShipkitConfig = {
       outputName: 'shipkit-example-demo',
       profile: 'development',
       extra: {
-        apiUrl: 'https://example.invalid',
+        apiUrl: 'https://example.invalid'
       },
       android: {
         applicationId: 'com.fluentic.shipkit.example',
@@ -17,23 +17,23 @@ const config: ShipkitConfig = {
           keyAlias: 'shipkit',
           keyPassword: 'shipkit',
           path: './credentials/android/demo.jks',
-          storePassword: 'shipkit',
-        },
+          storePassword: 'shipkit'
+        }
       },
       ios: {
         buildNumber: '1',
         bundleIdentifier: 'com.fluentic.shipkit.example',
         certificate: {
           password: 'shipkit',
-          path: './credentials/ios/demo.p12',
+          path: './credentials/ios/demo.p12'
         },
         profiles: {
-          app: './credentials/ios/demo.mobileprovision',
+          app: './credentials/ios/demo.mobileprovision'
         },
-        teamId: 'TEAMID1234',
-      },
-    },
-  },
+        teamId: 'TEAMID1234'
+      }
+    }
+  }
 };
 
 export default config;

@@ -43,7 +43,7 @@ export type NativeEvent = {
   data?: unknown;
 };
 
-export type NativeEventSink = (event: NativeEvent,) => void;
+export type NativeEventSink = (event: NativeEvent) => void;
 
 export type NativeLicenseInput = {
   licenseKey: string;
@@ -68,7 +68,7 @@ export type NativeBuildInput = {
 };
 
 export type NativeBinding = {
-  activateLicense(inputJson: string, onEvent: NativeEventSink,): string;
-  runCommand(inputJson: string, onEvent: NativeEventSink,): string;
-  runBuild(inputJson: string, onEvent: NativeEventSink,): string;
+  activateLicense(inputJson: string, onEvent: NativeEventSink): string;
+  runCommand(inputJson: string, onEvent: NativeEventSink): string;
+  runBuild(inputJson: string, onEvent: NativeEventSink): string;
 };

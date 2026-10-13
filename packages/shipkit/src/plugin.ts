@@ -1,13 +1,13 @@
-import { runtimeEnvFromProcess, } from './utils.js';
+import { runtimeEnvFromProcess } from './utils.js';
 
 type ExpoConfig = {
   extra?: Record<string, unknown>;
 };
 
-export function withShipkitEnv<T extends ExpoConfig,>(config: T,): T {
+export function withShipkitEnv<T extends ExpoConfig>(config: T): T {
   config.extra = {
     ...config.extra,
-    shipkit: runtimeEnvFromProcess(),
+    shipkit: runtimeEnvFromProcess()
   };
 
   return config;
