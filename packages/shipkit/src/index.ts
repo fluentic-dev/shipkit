@@ -1,11 +1,15 @@
 export { main } from './cli.js';
-export { defineConfig } from './config.js';
+export { defineConfig, defineEnvs } from './config.js';
 export type {
+  Artifact,
+  BuildConfig,
+  BuildConfigOptions,
+  BuildCredentials,
+  MultiEnvBuildConfig,
   NativeBuildInput,
   NativeCommandInput,
   NativeEvent,
   NativeEventSink,
   NativeLicenseInput,
-  ShipkitConfig,
-  ShipkitEnvConfig
+  Platform
 } from './types.js';

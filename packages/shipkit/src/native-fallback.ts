@@ -84,7 +84,7 @@ export const fallbackNative: NativeBinding = {
     const input = JSON.parse(inputJson) as NativeBuildInput;
     assertLicense(input.homeDir, input.licenseKey);
 
-    const envConfig = input.config.envs[input.env];
+    const envConfig = input.config.config.find((item) => item.env === input.env)?.config.config;
     if (!envConfig) throw new Error(`Unknown Shipkit env: ${input.env}`);
 
     onEvent({ level: 'info', message: 'License accepted.' });

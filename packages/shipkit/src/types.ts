@@ -1,7 +1,7 @@
-export type ShipkitPlatform = 'android' | 'ios';
-export type ShipkitArtifact = 'apk' | 'aab' | 'ipa';
+export type Platform = 'android' | 'ios';
+export type Artifact = 'apk' | 'aab' | 'ipa';
 
-export type ShipkitCredentials = {
+export type BuildCredentials = {
   android: {
     keystore: {
       path: string;
@@ -20,16 +20,27 @@ export type ShipkitCredentials = {
   };
 };
 
-export type ShipkitEnvConfig = {
+export type BuildConfigOptions = {
   fileName?: string;
   apk?: boolean;
+  abb?: boolean;
   aab?: boolean;
+  ipa?: boolean;
   adjustEnv?: string;
-  credentials?: ShipkitCredentials;
+  credentials?: BuildCredentials;
 };
 
-export type ShipkitConfig = {
-  envs: Record<string, ShipkitEnvConfig>;
+export type BuildConfig = {
+  type: 'config';
+  config: BuildConfigOptions;
+};
+
+export type MultiEnvBuildConfig = {
+  type: 'config:envs';
+  config: Array<{
+    env: string;
+    config: BuildConfig;
+  }>;
 };
 
 export type NativeEvent = {
@@ -54,9 +65,9 @@ export type NativeCommandInput = {
 export type NativeBuildInput = {
   appDir: string;
   env: string;
-  platform: ShipkitPlatform;
-  artifact: ShipkitArtifact;
-  config: ShipkitConfig;
+  platform: Platform;
+  artifact: Artifact;
+  config: MultiEnvBuildConfig;
   licenseKey?: string;
   homeDir: string;
   dryRun?: boolean;

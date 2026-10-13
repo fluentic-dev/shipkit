@@ -1,4 +1,4 @@
-import type { ShipkitEnvConfig } from './types.js';
+import type { BuildConfigOptions } from './types.js';
 
 export type ShipkitRuntimeEnv = {
   env?: string;
@@ -6,7 +6,7 @@ export type ShipkitRuntimeEnv = {
   platform?: string;
 };
 
-export function runtimeEnvFromProcess(envConfig?: ShipkitEnvConfig): ShipkitRuntimeEnv {
+export function runtimeEnvFromProcess(envConfig?: BuildConfigOptions): ShipkitRuntimeEnv {
   const env: ShipkitRuntimeEnv = {};
   const profile = process.env.SHIPKIT_PROFILE ?? envConfig?.adjustEnv;
 
