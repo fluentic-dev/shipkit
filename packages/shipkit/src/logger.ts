@@ -1,37 +1,107 @@
+import { intro, log, note, outro, spinner } from '@clack/prompts';
 import type { NativeEvent } from './types.js';
 
-const colors = {
-  dim: '\u001B[2m',
-  reset: '\u001B[0m',
-  red: '\u001B[31m',
-  green: '\u001B[32m',
-  yellow: '\u001B[33m',
-  cyan: '\u001B[36m'
-};
+type Spinner = ReturnType<typeof spinner>;
 
-function color(text: string, code: string) {
-  if (process.env.NO_COLOR) return text;
-  return `${code}${text}${colors.reset}`;
+let activeSpinner: Spinner | null = null;
+
+export function printIntro(title: string) {
+  intro(title);
 }
 
-const labels: Record<NativeEvent['level'], string> = {
-  debug: color('debug', colors.dim),
-  error: color('error', colors.red),
-  info: color('info', colors.cyan),
-  success: color('done', colors.green),
-  warn: color('warn', colors.yellow)
-};
+export function printOutro(message: string) {
+  outro(message);
+}
+
+export function printNote(title: string, lines: Array<string | false | null | undefined>) {
+  const body = lines.filter(Boolean).join('\n');
+  if (body) note(body, title);
+}
+
+export function startSpinner(message: string) {
+  if (!process.stdout.isTTY) {
+    log.step(message);
+
+    return {
+      message(next: string) {
+        log.info(next);
+      },
+      error(next?: string) {
+        log.error(next ?? message);
+      },
+      stop(next?: string) {
+        log.success(next ?? message);
+      }
+    };
+  }
+
+  activeSpinner?.stop();
+  activeSpinner = spinner();
+  activeSpinner.start(message);
+
+  return {
+    message(next: string) {
+      activeSpinner?.message(next);
+    },
+    error(message?: string) {
+      activeSpinner?.error(message);
+      activeSpinner = null;
+    },
+    stop(message?: string) {
+      activeSpinner?.stop(message);
+      activeSpinner = null;
+    }
+  };
+}
 
 export function printEvent(input: NativeEvent | string) {
   const event = typeof input === 'string' ? (JSON.parse(input) as NativeEvent) : input;
-  const label = labels[event.level] ?? labels.info;
-  console.log(`${label} ${event.message}`);
 
-  if (event.data && process.env.SHIPKIT_DEBUG) {
-    console.log(color(JSON.stringify(event.data, null, 2), colors.dim));
+  if (event.level === 'debug' && !process.env.SHIPKIT_DEBUG) {
+    return;
+  }
+
+  const message = formatEventMessage(event);
+
+  switch (event.level) {
+    case 'error':
+      log.error(message);
+      break;
+    case 'success':
+      log.success(message);
+      break;
+    case 'warn':
+      log.warn(message);
+      break;
+    case 'debug':
+      log.info(message);
+      break;
+    default:
+      log.info(message);
+      break;
   }
 }
 
-export function printHeader(title: string) {
-  console.log(color(`\n${title}`, colors.green));
+export function printError(error: unknown) {
+  printEvent({
+    level: 'error',
+    message: error instanceof Error ? error.message : String(error)
+  });
+}
+
+function formatEventMessage(event: NativeEvent) {
+  const data = event.data && process.env.SHIPKIT_DEBUG
+    ? `\n${JSON.stringify(event.data, null, 2)}`
+    : '';
+
+  return `${formatMessage(event.message)}${data}`;
+}
+
+function formatMessage(message: string) {
+  if (/\s/.test(message)) return message;
+
+  return message
+    .split('.')
+    .map((part) => part.replace(/_/g, ' '))
+    .join(' ');
 }

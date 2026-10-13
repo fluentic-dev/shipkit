@@ -1,9 +1,16 @@
+import { cancel, isCancel, password, select } from '@clack/prompts';
 import { defineCommand, runMain } from 'citty';
 import os from 'node:os';
 import path from 'node:path';
-import readline from 'node:readline/promises';
 import { loadShipkitConfig } from './config.js';
-import { printEvent, printHeader } from './logger.js';
+import {
+  printError,
+  printEvent,
+  printIntro,
+  printNote,
+  printOutro,
+  startSpinner
+} from './logger.js';
 import { createNativeRequestHandler } from './native-bridge.js';
 import { loadNative } from './native.js';
 import type {
@@ -30,8 +37,7 @@ function runNativeJson(fn: (input: string) => string, input: unknown) {
     const result = fn(JSON.stringify(input));
     return JSON.parse(result) as unknown;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    printEvent({ level: 'error', message });
+    printError(error);
     process.exitCode = 1;
     return null;
   }
@@ -57,24 +63,21 @@ async function selectBuildVariant(config: BuildManifest, name?: string) {
     throw new Error(`Build variant is required. Available variants: ${listVariants(config)}.`);
   }
 
-  printHeader('Shipkit Variants');
-  config.variants.forEach((item, index) => {
-    console.log(`${index + 1}. ${item.name}`);
+  const answer = await select({
+    message: 'Select build variant',
+    options: config.variants.map((variant) => ({
+      ...(variant.env === variant.name ? {} : { hint: `env ${variant.env}` }),
+      label: variant.name,
+      value: variant.name
+    }))
   });
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+  if (isCancel(answer)) {
+    cancel('Build cancelled.');
+    process.exit(0);
+  }
 
-  const answer = (await rl.question('Select variant: ')).trim();
-  rl.close();
-
-  const index = Number(answer);
-  const match = Number.isInteger(index)
-    ? config.variants[index - 1]
-    : config.variants.find((item) => item.name === answer);
-
+  const match = config.variants.find((item) => item.name === answer);
   if (!match) {
     throw new Error(
       `Invalid build variant selection "${answer}". Available variants: ${listVariants(config)}.`
@@ -82,6 +85,31 @@ async function selectBuildVariant(config: BuildManifest, name?: string) {
   }
 
   return match;
+}
+
+async function resolveLicenseKey(key?: string) {
+  if (key) return key;
+
+  if (!process.stdin.isTTY) {
+    throw new Error(
+      'License key is required. Pass it as an argument or run in an interactive terminal.'
+    );
+  }
+
+  const answer = await password({
+    message: 'Enter your Shipkit license key',
+    validate(value) {
+      if (!value?.trim()) return 'License key is required.';
+      return undefined;
+    }
+  });
+
+  if (isCancel(answer)) {
+    cancel('Activation cancelled.');
+    process.exit(0);
+  }
+
+  return answer;
 }
 
 function listVariants(config: BuildManifest) {
@@ -196,18 +224,20 @@ const licenseCommand = defineCommand({
         key: {
           type: 'positional',
           description: 'License key. Development placeholder: SHIPKIT-DEV-ALLOW',
-          required: true
+          required: false
         }
       },
-      run({ args }) {
-        printHeader('Shipkit License');
-        runNativeJson(
+      async run({ args }) {
+        printIntro('Shipkit License');
+        const licenseKey = await resolveLicenseKey(args.key);
+        const result = runNativeJson(
           (input) => native.activateLicense(input, nativeRequestHandler),
           {
             homeDir: os.homedir(),
-            licenseKey: args.key
+            licenseKey
           }
         );
+        if (result) printOutro('License activated.');
       }
     }),
     status: defineCommand({
@@ -216,8 +246,8 @@ const licenseCommand = defineCommand({
         description: 'Show current license state.'
       },
       run() {
-        printHeader('Shipkit License');
-        runNativeJson(
+        printIntro('Shipkit License');
+        const result = runNativeJson(
           (input) => native.runCommand(input, nativeRequestHandler),
           {
             appDir: process.cwd(),
@@ -225,6 +255,7 @@ const licenseCommand = defineCommand({
             homeDir: os.homedir()
           }
         );
+        if (result) printOutro('License check complete.');
       }
     })
   }
@@ -293,7 +324,18 @@ const buildCommand = defineCommand({
 
       const appDir = appDirFromArgs(process.cwd(), args.appDir);
       const configPath = configPathFromArgs(appDir, args.config);
-      const config = await loadShipkitConfig(configPath);
+      printIntro(`Shipkit ${platform}`);
+
+      const loadTask = startSpinner('Loading build configuration');
+      let config: BuildManifest;
+      try {
+        config = await loadShipkitConfig(configPath);
+        loadTask.stop('Build configuration ready');
+      } catch (error) {
+        loadTask.error('Build configuration failed');
+        throw error;
+      }
+
       const selected = await selectBuildVariant(config, args.env);
       const artifacts = resolveArtifacts(platform, selected, args);
 
@@ -301,7 +343,14 @@ const buildCommand = defineCommand({
         throw new Error(`No ${platform} build targets are enabled for variant "${selected.name}".`);
       }
 
-      printHeader(`Shipkit ${platform}`);
+      printNote('Build', [
+        `Variant  ${selected.name}`,
+        `Env      ${selected.env}`,
+        `Targets  ${artifacts.join(', ')}`,
+        `App      ${path.relative(process.cwd(), appDir) || '.'}`
+      ]);
+
+      let failed = false;
 
       for (const artifact of artifacts) {
         const input: NativeBuildInput = {
@@ -319,11 +368,21 @@ const buildCommand = defineCommand({
           input.licenseKey = args.license;
         }
 
-        runNativeJson((json) => native.runBuild(json, nativeRequestHandler), input);
+        const buildTask = startSpinner(`Running ${platform} ${artifact} build`);
+        const result = runNativeJson((json) => native.runBuild(json, nativeRequestHandler), input);
+
+        if (result) {
+          buildTask.stop(`${platform} ${artifact} finished`);
+        } else {
+          buildTask.error(`${platform} ${artifact} failed`);
+          failed = true;
+          break;
+        }
       }
+
+      printOutro(failed ? 'Shipkit build failed.' : 'Shipkit build complete.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      printEvent({ level: 'error', message });
+      printError(error);
       process.exitCode = 1;
     }
   }
@@ -348,8 +407,8 @@ const mainCommand = defineCommand({
         }
       },
       run({ args }) {
-        printHeader('Shipkit Doctor');
-        runNativeJson(
+        printIntro('Shipkit Doctor');
+        const result = runNativeJson(
           (input) => native.runCommand(input, nativeRequestHandler),
           {
             appDir: appDirFromArgs(process.cwd(), args.appDir),
@@ -357,6 +416,7 @@ const mainCommand = defineCommand({
             homeDir: os.homedir()
           }
         );
+        if (result) printOutro('Shipkit is ready.');
       }
     }),
     license: licenseCommand
