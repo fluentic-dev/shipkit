@@ -1,15 +1,22 @@
 import { log, outro, spinner } from '@clack/prompts';
 import { styleText } from 'node:util';
-import type { NativeEvent } from './types.js';
+import type { NativeEvent, NativeProcessLog } from './types.js';
 
 type Spinner = ReturnType<typeof spinner>;
+export type NativeLogMode = 'auto' | 'collapsed' | 'expanded';
 type PanelRow = {
   label: string;
   value: string | number | boolean | null | undefined;
 };
+type NativeLogLine = {
+  prefix: string;
+  text: string;
+};
 
 let activeSpinner: Spinner | null = null;
 const ansiPattern = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'gu');
+const clearDown = `${String.fromCharCode(27)}[0J`;
+const nativeLogTail = 8;
 
 export function printIntro(title: string, context?: string) {
   const brand = styleText(['inverse', 'bold'], ' SHIPKIT ');
@@ -107,6 +114,122 @@ export function startSpinner(message: string) {
   };
 }
 
+export function createNativeLogView(options: {
+  mode: NativeLogMode;
+  title: string;
+}) {
+  const tty = process.stdout.isTTY;
+  const lines: NativeLogLine[] = [];
+  const live = tty && options.mode !== 'collapsed';
+  let renderedLines = 0;
+
+  function start() {
+    if (!tty || options.mode === 'collapsed') {
+      log.step(options.title);
+      return;
+    }
+
+    renderTail();
+  }
+
+  function event(event: NativeEvent) {
+    if (event.level === 'debug' && !process.env.SHIPKIT_DEBUG) {
+      return;
+    }
+
+    push({
+      prefix: event.level,
+      text: formatEventMessage(event)
+    });
+  }
+
+  function nativeLog(native: NativeProcessLog) {
+    push({
+      prefix: `${native.label}:${native.stream}`,
+      text: native.line
+    });
+  }
+
+  function finish(success: boolean) {
+    if (!tty) {
+      if (success) {
+        log.success(`${options.title} finished`);
+      } else {
+        log.error(`${options.title} failed`);
+      }
+      return;
+    }
+
+    if (!success) {
+      renderAll('Native logs');
+      log.error(`${options.title} failed`);
+      return;
+    }
+
+    if (options.mode === 'expanded') {
+      renderAll('Native logs');
+    } else {
+      clearRendered();
+      log.success(`Native logs collapsed (${lines.length} lines)`);
+    }
+
+    log.success(`${options.title} finished`);
+  }
+
+  function push(line: NativeLogLine) {
+    lines.push(line);
+
+    if (!tty) {
+      process.stdout.write(`${styleText('dim', '│')} ${formatNativeLogLine(line)}\n`);
+      return;
+    }
+
+    if (live) renderTail();
+  }
+
+  function renderTail() {
+    const hidden = Math.max(lines.length - nativeLogTail, 0);
+    const visible = lines.slice(-nativeLogTail);
+    render(
+      'Native logs',
+      hidden > 0
+        ? [{ prefix: 'more', text: `${hidden} earlier lines hidden` }, ...visible]
+        : visible
+    );
+  }
+
+  function renderAll(title: string) {
+    render(title, lines.length > 0 ? lines : [{ prefix: 'native', text: 'No native logs.' }]);
+  }
+
+  function render(title: string, nextLines: NativeLogLine[]) {
+    clearRendered();
+
+    const panelLines = formatNativeLogPanel(
+      title,
+      nextLines.length > 0
+        ? nextLines
+        : [{ prefix: 'native', text: 'Waiting for native output...' }]
+    );
+
+    process.stdout.write(panelLines);
+    renderedLines = panelLines.split('\n').filter(Boolean).length;
+  }
+
+  function clearRendered() {
+    if (renderedLines === 0) return;
+    process.stdout.write(`${String.fromCharCode(27)}[${renderedLines}A${clearDown}`);
+    renderedLines = 0;
+  }
+
+  return {
+    event,
+    finish,
+    nativeLog,
+    start
+  };
+}
+
 export function printEvent(input: NativeEvent | string) {
   const event = typeof input === 'string' ? (JSON.parse(input) as NativeEvent) : input;
 
@@ -169,4 +292,34 @@ function padVisible(value: string, width: number) {
 
 function stripAnsi(value: string) {
   return value.replace(ansiPattern, '');
+}
+
+function formatNativeLogPanel(title: string, lines: NativeLogLine[]) {
+  const width = Math.min(Math.max(process.stdout.columns ?? 88, 56), 120);
+  const innerWidth = width - 4;
+  const titleText = ` ${title} `;
+  const top = `${styleText('green', '╭')}${styleText('green', titleText)}${
+    styleText('green', '─'.repeat(Math.max(innerWidth - visibleWidth(titleText), 1)))
+  }${styleText('green', '╮')}`;
+  const body = lines.map((line) => {
+    const text = truncateVisible(formatNativeLogLine(line), innerWidth - 2);
+    return `${styleText('green', '│')} ${text}${
+      ' '.repeat(Math.max(innerWidth - visibleWidth(text) - 1, 0))
+    }${styleText('green', '│')}`;
+  });
+  const bottom = `${styleText('green', '╰')}${styleText('green', '─'.repeat(innerWidth))}${
+    styleText('green', '╯')
+  }`;
+
+  return `${[top, ...body, bottom].join('\n')}\n`;
+}
+
+function formatNativeLogLine(line: NativeLogLine) {
+  return `${styleText('dim', `[${line.prefix}]`)} ${stripAnsi(line.text)}`;
+}
+
+function truncateVisible(value: string, width: number) {
+  const stripped = stripAnsi(value);
+  if (stripped.length <= width) return value;
+  return `${stripped.slice(0, Math.max(width - 1, 0))}…`;
 }

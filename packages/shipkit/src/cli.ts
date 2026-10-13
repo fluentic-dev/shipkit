@@ -5,6 +5,8 @@ import path from 'node:path';
 import { getShipkitEnvSnapshot } from './config-env.js';
 import { loadShipkitConfig } from './config.js';
 import {
+  createNativeLogView,
+  type NativeLogMode,
   printError,
   printEvent,
   printIntro,
@@ -47,12 +49,21 @@ async function loadBuildManifest(configPath: string) {
   }
 }
 
-function runNativeJson(fn: (input: string) => string, input: unknown) {
+function runNativeJson(
+  fn: (input: string) => string,
+  input: unknown,
+  options?: { onError?: (error: unknown) => void; }
+) {
   try {
     const result = fn(JSON.stringify(input));
     return JSON.parse(result) as unknown;
   } catch (error) {
-    printError(error);
+    if (options?.onError) {
+      options.onError(error);
+    } else {
+      printError(error);
+    }
+
     process.exitCode = 1;
     return null;
   }
@@ -238,6 +249,19 @@ function parseBooleanOverride(value: unknown) {
   throw new Error(`Expected boolean override, got "${String(value)}".`);
 }
 
+function parseNativeLogMode(value: unknown): NativeLogMode {
+  if (value === undefined) return 'auto';
+
+  if (value === 'auto' || value === 'expanded' || value === 'collapsed') {
+    return value;
+  }
+
+  if (value === 'show' || value === 'open') return 'expanded';
+  if (value === 'hide' || value === 'closed') return 'collapsed';
+
+  throw new Error('Native log mode must be auto, expanded, or collapsed.');
+}
+
 function objectEntries<T extends Record<string, boolean>>(value: T) {
   return Object.entries(value) as Array<[keyof T & Artifact, boolean]>;
 }
@@ -380,6 +404,10 @@ const buildCommand = defineCommand({
       type: 'string',
       description: 'Build one target: apk, aab, or ipa.'
     },
+    logs: {
+      type: 'string',
+      description: 'Native logs display: auto, expanded, or collapsed.'
+    },
     license: {
       type: 'string',
       description: 'License key override. Usually use shipkit license activate.'
@@ -401,6 +429,7 @@ const buildCommand = defineCommand({
       const config = await loadBuildManifest(configPath);
       const selected = await selectBuildVariant(config, args.env);
       const artifacts = resolveArtifacts(platform, selected, args);
+      const nativeLogMode = parseNativeLogMode(args.logs);
 
       if (artifacts.length === 0) {
         throw new Error(`No ${platform} build targets are enabled for variant "${selected.name}".`);
@@ -432,13 +461,32 @@ const buildCommand = defineCommand({
           input.licenseKey = args.license;
         }
 
-        const buildTask = startSpinner(`Running ${platform} ${artifact} build`);
-        const result = runNativeJson((json) => native.runBuild(json, nativeRequestHandler), input);
+        const nativeLogView = createNativeLogView({
+          mode: nativeLogMode,
+          title: `Running ${platform} ${artifact} build`
+        });
+        const buildRequestHandler = createNativeRequestHandler({
+          onEvent: nativeLogView.event,
+          onNativeLog: nativeLogView.nativeLog
+        });
+
+        let buildError: unknown;
+        nativeLogView.start();
+        const result = runNativeJson(
+          (json) => native.runBuild(json, buildRequestHandler),
+          input,
+          {
+            onError(error) {
+              buildError = error;
+            }
+          }
+        );
 
         if (result) {
-          buildTask.stop(`${platform} ${artifact} finished`);
+          nativeLogView.finish(true);
         } else {
-          buildTask.error(`${platform} ${artifact} failed`);
+          nativeLogView.finish(false);
+          if (buildError) printError(buildError);
           failed = true;
           break;
         }

@@ -1,14 +1,23 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import type { NativeEvent, NativeRequest, NativeResponse } from './types.js';
+import type { NativeEvent, NativeProcessLog, NativeRequest, NativeResponse } from './types.js';
 
 const require = createRequire(import.meta.url);
 
-export function createNativeRequestHandler(onEvent: (event: NativeEvent) => void) {
+type NativeRequestHandlers = {
+  onEvent: (event: NativeEvent) => void;
+  onNativeLog?: (log: NativeProcessLog) => void;
+};
+
+export function createNativeRequestHandler(
+  input: ((event: NativeEvent) => void) | NativeRequestHandlers
+) {
+  const handlers = typeof input === 'function' ? { onEvent: input } : input;
+
   return (requestJson: string) => {
     try {
       const request = JSON.parse(requestJson) as NativeRequest;
-      const response = handleNativeRequest(request, onEvent);
+      const response = handleNativeRequest(request, handlers);
       return JSON.stringify({ ok: true, data: response } satisfies NativeResponse);
     } catch (error) {
       return JSON.stringify(
@@ -23,11 +32,14 @@ export function createNativeRequestHandler(onEvent: (event: NativeEvent) => void
 
 function handleNativeRequest(
   request: NativeRequest,
-  onEvent: (event: NativeEvent) => void
+  handlers: NativeRequestHandlers
 ) {
   switch (request.code) {
     case 'log':
-      onEvent(request.data);
+      handlers.onEvent(request.data);
+      return null;
+    case 'native_log':
+      handlers.onNativeLog?.(request.data);
       return null;
     case 'read_expo_config':
       return readExpoConfig(request.data);

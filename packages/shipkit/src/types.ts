@@ -62,6 +62,12 @@ export type NativeEvent = {
   data?: unknown;
 };
 
+export type NativeProcessLog = {
+  label: string;
+  line: string;
+  stream: 'stderr' | 'stdout';
+};
+
 export type NativeRequest =
   | {
     code: 'log';
@@ -70,6 +76,10 @@ export type NativeRequest =
       message: string;
       data?: unknown;
     };
+  }
+  | {
+    code: 'native_log';
+    data: NativeProcessLog;
   }
   | {
     code: 'read_expo_config';
@@ -100,6 +110,7 @@ export type NativeResponse =
   };
 
 export type NativeEventSink = (event: NativeEvent) => void;
+export type NativeProcessLogSink = (log: NativeProcessLog) => void;
 export type NativeRequestHandler = (requestJson: string) => string;
 
 export type NativeLicenseInput = {
