@@ -121,7 +121,7 @@ export function createNativeLogView(options: {
   const tty = process.stdout.isTTY;
   const lines: NativeLogLine[] = [];
   const live = tty && options.mode !== 'collapsed';
-  let phase = 'Checking license';
+  let phase = 'Preparing build';
   let renderedLines = 0;
 
   function start() {
@@ -241,6 +241,7 @@ export function createNativeLogView(options: {
   }
 
   return {
+    clear: clearRendered,
     event,
     finish,
     nativeLog,
@@ -342,9 +343,13 @@ function stripAnsi(value: string) {
 }
 
 function formatNativeLogPanel(title: string, lines: NativeLogLine[]) {
-  const width = Math.min(Math.max(process.stdout.columns ?? 88, 56), 120);
-  const innerWidth = width - 4;
   const titleText = ` ${title} `;
+  const maxLineWidth = Math.max(
+    visibleWidth(titleText),
+    ...lines.map((line) => visibleWidth(formatNativeLogLine(line)))
+  );
+  const terminalLimit = Math.max((process.stdout.columns ?? 88) - 4, 36);
+  const innerWidth = Math.min(Math.max(maxLineWidth + 2, 36), terminalLimit, 100);
   const top = `${styleText('green', '╭')}${styleText('green', titleText)}${
     styleText('green', '─'.repeat(Math.max(innerWidth - visibleWidth(titleText), 1)))
   }${styleText('green', '╮')}`;

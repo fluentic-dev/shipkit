@@ -1,5 +1,6 @@
 import { cancel, isCancel, password, select } from '@clack/prompts';
 import { defineCommand, runMain } from 'citty';
+import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { styleText } from 'node:util';
@@ -272,7 +273,7 @@ function formatPlatform(platform: Platform) {
 }
 
 function formatPlatformBadge(platform: Platform) {
-  return styleText(['inverse', 'cyan', 'bold'], platform === 'ios' ? ' iOS ' : ' Android ');
+  return styleText(['bold', 'cyan'], formatPlatform(platform));
 }
 
 function formatArtifact(artifact: Artifact) {
@@ -323,6 +324,42 @@ function parseOptionalPlatform(input: unknown): Platform | null {
   if (input === undefined) return null;
   if (input === 'android' || input === 'ios') return input;
   throw new Error('Platform must be android or ios.');
+}
+
+function printLicenseGuide() {
+  printPanel('License required', [
+    { label: 'Status', value: 'not activated' },
+    { label: 'Activate', value: 'shipkit license activate' },
+    { label: 'Dev key', value: 'SHIPKIT-DEV-ALLOW' }
+  ]);
+  printOutro('Activate Shipkit before running build commands.');
+}
+
+function hasAvailableLicense(licenseOverride: unknown) {
+  if (typeof licenseOverride === 'string' && licenseOverride.trim()) {
+    return true;
+  }
+
+  try {
+    const raw = readFileSync(path.join(os.homedir(), '.shipkit', 'license'), 'utf8');
+    const license = JSON.parse(raw) as { licenseKey?: unknown; };
+    return typeof license.licenseKey === 'string' && license.licenseKey.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function isLicenseError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /license/u.test(message);
+}
+
+function assertLicenseAvailable(licenseOverride: unknown) {
+  if (hasAvailableLicense(licenseOverride)) return true;
+
+  printLicenseGuide();
+  process.exitCode = 1;
+  return false;
 }
 
 const licenseCommand = defineCommand({
@@ -435,10 +472,13 @@ const buildCommand = defineCommand({
 
       assertNoRemovedBuildFlags(process.argv);
 
+      printIntro(formatPlatform(platform), 'build');
+      if (!assertLicenseAvailable(args.license)) {
+        return;
+      }
+
       const appDir = appDirFromArgs(process.cwd(), args.appDir);
       const configPath = configPathFromArgs(appDir, args.config);
-      printIntro(formatPlatform(platform), 'build');
-
       const config = await loadBuildManifest(configPath);
       const selected = await selectBuildVariant(config, args.env);
       const artifacts = resolveArtifacts(platform, selected, args);
@@ -498,6 +538,13 @@ const buildCommand = defineCommand({
         if (result) {
           nativeLogView.finish(true);
         } else {
+          if (isLicenseError(buildError)) {
+            nativeLogView.clear();
+            printLicenseGuide();
+            process.exitCode = 1;
+            return;
+          }
+
           nativeLogView.finish(false);
           if (buildError) printError(buildError);
           failed = true;
