@@ -108,13 +108,6 @@ export const fallbackNative: NativeBinding = {
     const variant = input.config.variants.find((item) => item.name === input.name);
     if (!variant) throw new Error(`Unknown Shipkit build variant: ${input.name}`);
 
-    emit(onRequest, 'info', 'License accepted.');
-    emit(
-      onRequest,
-      'info',
-      `Planning ${input.platform} ${input.artifact} build for ${input.name}.`,
-      variant
-    );
     emit(onRequest, 'warn', 'Rust addon is not built; this is the development JS fallback.');
     emit(onRequest, 'success', 'Placeholder build complete.');
 

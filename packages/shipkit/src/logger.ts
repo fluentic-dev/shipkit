@@ -121,11 +121,12 @@ export function createNativeLogView(options: {
   const tty = process.stdout.isTTY;
   const lines: NativeLogLine[] = [];
   const live = tty && options.mode !== 'collapsed';
+  let phase = 'Checking license';
   let renderedLines = 0;
 
   function start() {
     if (!tty || options.mode === 'collapsed') {
-      log.step(options.title);
+      log.step(phase);
       return;
     }
 
@@ -137,6 +138,21 @@ export function createNativeLogView(options: {
       return;
     }
 
+    const nextPhase = phaseFromNativeEvent(event.message);
+    if (nextPhase) {
+      phase = nextPhase;
+      if (!tty || options.mode === 'collapsed') {
+        log.step(phase);
+      } else if (live) {
+        renderTail();
+      }
+      return;
+    }
+
+    if (isHiddenNativeEvent(event.message)) {
+      return;
+    }
+
     push({
       prefix: event.level,
       text: formatEventMessage(event)
@@ -144,6 +160,7 @@ export function createNativeLogView(options: {
   }
 
   function nativeLog(native: NativeProcessLog) {
+    phase = phaseFromNativeLog(native.label) ?? phase;
     push({
       prefix: `${native.label}:${native.stream}`,
       text: native.line
@@ -161,19 +178,22 @@ export function createNativeLogView(options: {
     }
 
     if (!success) {
-      renderAll('Native logs');
+      renderAll('Build failed');
       log.error(`${options.title} failed`);
       return;
     }
 
     if (options.mode === 'expanded') {
-      renderAll('Native logs');
+      phase = 'Build complete';
+      renderAll('Build complete');
     } else {
       clearRendered();
-      log.success(`Native logs collapsed (${lines.length} lines)`);
+      if (lines.length > 0) {
+        log.info(`Native logs collapsed (${lines.length} lines)`);
+      }
     }
 
-    log.success(`${options.title} finished`);
+    log.success(`${options.title} complete`);
   }
 
   function push(line: NativeLogLine) {
@@ -191,7 +211,7 @@ export function createNativeLogView(options: {
     const hidden = Math.max(lines.length - nativeLogTail, 0);
     const visible = lines.slice(-nativeLogTail);
     render(
-      'Native logs',
+      lines.length > 0 ? 'Native logs' : 'Build progress',
       hidden > 0
         ? [{ prefix: 'more', text: `${hidden} earlier lines hidden` }, ...visible]
         : visible
@@ -199,7 +219,7 @@ export function createNativeLogView(options: {
   }
 
   function renderAll(title: string) {
-    render(title, lines.length > 0 ? lines : [{ prefix: 'native', text: 'No native logs.' }]);
+    render(title, lines);
   }
 
   function render(title: string, nextLines: NativeLogLine[]) {
@@ -207,9 +227,7 @@ export function createNativeLogView(options: {
 
     const panelLines = formatNativeLogPanel(
       title,
-      nextLines.length > 0
-        ? nextLines
-        : [{ prefix: 'native', text: 'Waiting for native output...' }]
+      [{ prefix: 'stage', text: phase }, ...nextLines]
     );
 
     process.stdout.write(panelLines);
@@ -280,6 +298,35 @@ function formatMessage(message: string) {
     .split('.')
     .map((part) => part.replace(/_/g, ' '))
     .join(' ');
+}
+
+function isHiddenNativeEvent(message: string) {
+  return message === 'License accepted.' || /^Planning .+ build for .+\.$/u.test(message);
+}
+
+function phaseFromNativeEvent(message: string) {
+  const phases: Record<string, string> = {
+    'android.prepare_signing': 'Preparing Android signing',
+    'android.reset_release_outputs': 'Cleaning Android release outputs',
+    'gradle.build': 'Running Gradle',
+    'ios.prepare_keychain': 'Preparing iOS keychain',
+    'ios.install_profiles': 'Installing provisioning profiles',
+    'security.create_keychain': 'Creating iOS keychain',
+    'security.delete_keychain': 'Cleaning iOS keychain',
+    'security.import_certificate': 'Importing signing certificate',
+    'security.set_key_partition_list': 'Configuring keychain access',
+    'security.set_keychain_settings': 'Configuring iOS keychain',
+    'security.unlock_keychain': 'Unlocking iOS keychain',
+    'xcodebuild.archive': 'Archiving with Xcode',
+    'xcodebuild.export_archive': 'Exporting IPA'
+  };
+
+  if (message.startsWith('output: ')) return 'Moving artifact';
+  return phases[message] ?? null;
+}
+
+function phaseFromNativeLog(label: string) {
+  return phaseFromNativeEvent(label);
 }
 
 function visibleWidth(value: string) {

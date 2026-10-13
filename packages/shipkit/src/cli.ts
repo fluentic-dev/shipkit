@@ -2,6 +2,7 @@ import { cancel, isCancel, password, select } from '@clack/prompts';
 import { defineCommand, runMain } from 'citty';
 import os from 'node:os';
 import path from 'node:path';
+import { styleText } from 'node:util';
 import { getShipkitEnvSnapshot } from './config-env.js';
 import { loadShipkitConfig } from './config.js';
 import {
@@ -270,6 +271,18 @@ function formatPlatform(platform: Platform) {
   return platform === 'ios' ? 'iOS' : 'Android';
 }
 
+function formatPlatformBadge(platform: Platform) {
+  return styleText(['inverse', 'cyan', 'bold'], platform === 'ios' ? ' iOS ' : ' Android ');
+}
+
+function formatArtifact(artifact: Artifact) {
+  return artifact.toUpperCase();
+}
+
+function formatBuildTitle(platform: Platform, artifact: Artifact) {
+  return `${formatPlatform(platform)} ${formatArtifact(artifact)} build`;
+}
+
 function formatTargets(platform: Platform | null, variant: ResolvedBuildVariantConfig) {
   const targets: string[] = [];
   if (platform !== 'ios' && variant.apk) targets.push('apk');
@@ -436,7 +449,7 @@ const buildCommand = defineCommand({
       }
 
       printPanel('Build', [
-        { label: 'Platform', value: formatPlatform(platform) },
+        { label: 'Platform', value: formatPlatformBadge(platform) },
         { label: 'Variant', value: selected.name },
         { label: 'Env', value: selected.env },
         { label: 'Targets', value: artifacts.join(', ') },
@@ -463,7 +476,7 @@ const buildCommand = defineCommand({
 
         const nativeLogView = createNativeLogView({
           mode: nativeLogMode,
-          title: `Running ${platform} ${artifact} build`
+          title: formatBuildTitle(platform, artifact)
         });
         const buildRequestHandler = createNativeRequestHandler({
           onEvent: nativeLogView.event,
