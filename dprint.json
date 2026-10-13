@@ -17,6 +17,7 @@
     "**/node_modules",
     "**/target",
     "**/dist",
+    "private/**",
     "**/.expo",
     "**/ios",
     "**/android"

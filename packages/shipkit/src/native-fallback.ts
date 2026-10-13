@@ -15,7 +15,7 @@ function emit(onEvent: NativeEventSink, message: string, data?: unknown,) {
 }
 
 function licenseFile(homeDir: string,) {
-  return path.join(homeDir, '.fluentic', 'shipkit', 'license.json',);
+  return path.join(homeDir, '.shipkit', 'license',);
 }
 
 function readLicense(homeDir: string,) {

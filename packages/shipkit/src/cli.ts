@@ -17,8 +17,15 @@ function configPathFromArgs(appDir: string, config?: string,) {
 }
 
 function runNativeJson(fn: (input: string,) => string, input: unknown,) {
-  const result = fn(JSON.stringify(input,),);
-  return JSON.parse(result,) as unknown;
+  try {
+    const result = fn(JSON.stringify(input,),);
+    return JSON.parse(result,) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error,);
+    printEvent({ level: 'error', message, },);
+    process.exitCode = 1;
+    return null;
+  }
 }
 
 const licenseCommand = defineCommand({

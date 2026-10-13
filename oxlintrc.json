@@ -9,6 +9,7 @@
     "node_modules",
     "dist",
     "target",
+    "private",
     "examples/expo/.expo",
     "examples/expo/ios",
     "examples/expo/android"

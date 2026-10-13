@@ -6,6 +6,20 @@ This public repository contains the TypeScript CLI, Expo plugin, runtime env hel
 documentation. Protected build execution and license enforcement live in the private Rust native
 repository.
 
+## Repository Layout
+
+```text
+packages/shipkit/       Public TypeScript CLI, Expo plugin, and runtime env helper
+examples/expo/          Expo CNG example app
+private/                Optional private Rust native core submodule
+```
+
+The private submodule is intentionally visible so users can understand the product boundary:
+the public package owns ergonomics and integration, while the private native core owns protected
+execution and license enforcement.
+
+Public development does not require access to the private submodule.
+
 ## Development
 
 ```bash
@@ -30,3 +44,13 @@ create an `npm-release` environment, and set repository variable `NPM_PUBLISH_EN
 
 Native `.node` platform packages are built and published from the private `shipkit-private`
 repository.
+
+## Private Core
+
+Maintainers with access can initialize the private native core:
+
+```bash
+git submodule update --init private
+```
+
+If you do not have access, this step will fail and can be ignored for public package work.
