@@ -1,6 +1,7 @@
 export { main } from './cli.js';
 export { env } from './config-env.js';
 export { defineBuild, defineConfig, defineVariant, defineVariants } from './config.js';
+export { default, withPlugin } from './plugin.js';
 export type {
   Artifact,
   BuildConfig,

@@ -1,13 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import type {
+  NativeAppCommandInput,
+  NativeAppleVerifyInput,
   NativeBinding,
   NativeBuildInput,
   NativeCommandInput,
-  NativeLicenseInput
+  NativeCredentialsInput
 } from './types.js';
-
-const allowedLicense = 'SHIPKIT-DEV-ALLOW';
 
 function request(onRequest: (requestJson: string) => string, code: string, data: unknown) {
   const response = JSON.parse(onRequest(JSON.stringify({ code, data }))) as {
@@ -36,66 +34,27 @@ function emit(
   });
 }
 
-function licenseFile(homeDir: string) {
-  return path.join(homeDir, '.shipkit', 'license');
-}
-
-function readLicense(homeDir: string) {
-  try {
-    return JSON.parse(fs.readFileSync(licenseFile(homeDir), 'utf8')) as { licenseKey?: string; };
-  } catch {
-    return null;
-  }
-}
-
-function assertLicense(homeDir: string, licenseKey?: string) {
-  const activeKey = licenseKey ?? readLicense(homeDir)?.licenseKey;
-
-  if (activeKey !== allowedLicense) {
-    throw new Error(`Invalid Shipkit license. For local scaffolding use ${allowedLicense}.`);
-  }
+function assertLicense(_homeDir: string, _licenseKey?: string) {
+  throw new Error('Shipkit native license verifier is required.');
 }
 
 export const fallbackNative: NativeBinding = {
-  activateLicense(inputJson, onRequest) {
-    const input = JSON.parse(inputJson) as NativeLicenseInput;
-
-    if (input.licenseKey !== allowedLicense) {
-      throw new Error(`Invalid Shipkit license. For local scaffolding use ${allowedLicense}.`);
-    }
-
-    const file = licenseFile(input.homeDir);
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(
-      file,
-      JSON.stringify(
-        {
-          licenseKey: input.licenseKey,
-          activatedAt: new Date().toISOString(),
-          mode: 'development-placeholder'
-        },
-        null,
-        2
-      )
-    );
-
-    emit(onRequest, 'success', 'License activated with development placeholder.');
-    return JSON.stringify({ ok: true });
+  activateLicense() {
+    throw new Error('Shipkit native license verifier is required for activation.');
   },
 
   runCommand(inputJson, onRequest) {
     const input = JSON.parse(inputJson) as NativeCommandInput;
 
-    if (input.command === 'license-status') {
-      const license = readLicense(input.homeDir);
-      emit(
-        onRequest,
-        license?.licenseKey === allowedLicense ? 'success' : 'warn',
-        license?.licenseKey === allowedLicense
-          ? 'Development license is active.'
-          : 'No valid license is active.'
-      );
-      return JSON.stringify({ ok: true, active: license?.licenseKey === allowedLicense });
+    if (input.command === 'license-info') {
+      emit(onRequest, 'warn', 'Shipkit native license verifier is not available.');
+      return JSON.stringify({ ok: true, active: false });
+    }
+
+    if (input.command === 'license-support') {
+      emit(onRequest, 'info', 'Email shipkit@fluenticstack.com with this support output.');
+      emit(onRequest, 'warn', 'Shipkit native license verifier is not available.');
+      return JSON.stringify({ ok: true, active: false });
     }
 
     throw new Error(`Unknown Shipkit native command: ${input.command}`);
@@ -119,5 +78,66 @@ export const fallbackNative: NativeBinding = {
       platform: input.platform,
       artifact: input.artifact
     });
+  },
+
+  runAppCommand(inputJson, onRequest) {
+    const input = JSON.parse(inputJson) as NativeAppCommandInput;
+
+    const variant = input.config.variants.find((item) => item.name === input.name);
+    if (!variant) throw new Error(`Unknown Shipkit build variant: ${input.name}`);
+
+    if (input.command === 'ios-sign-auto') {
+      throw new Error('iOS signing patch requires native Shipkit.');
+    }
+
+    emit(onRequest, 'warn', 'Rust addon is not built; this is the development JS fallback.');
+    emit(onRequest, 'success', 'Placeholder command complete.');
+
+    return JSON.stringify({
+      ok: true,
+      mode: 'development-fallback',
+      command: input.command,
+      env: input.env,
+      name: input.name,
+      platform: input.platform
+    });
+  },
+
+  setupCredentials(inputJson, onRequest) {
+    const input = JSON.parse(inputJson) as NativeCredentialsInput;
+
+    emit(onRequest, 'warn', 'Rust addon is not built; credential setup requires native Shipkit.');
+    emit(
+      onRequest,
+      'info',
+      `Loaded ${input.config.variants.length} build variant(s) for credential setup.`
+    );
+
+    return JSON.stringify({
+      ok: true,
+      mode: 'development-fallback',
+      variants: input.config.variants.length
+    });
+  },
+
+  verifyAppleApi(inputJson, onRequest) {
+    const input = JSON.parse(inputJson) as NativeAppleVerifyInput;
+    void input;
+
+    emit(
+      onRequest,
+      'warn',
+      'Rust addon is not built; Apple API verification requires native Shipkit.'
+    );
+    return JSON.stringify({
+      ok: true,
+      mode: 'development-fallback',
+      certificates: 0,
+      profiles: 0
+    });
+  },
+
+  listAppleCertificates() {
+    throw new Error('Rust addon is not built; Apple certificate listing requires native Shipkit.');
   }
 };

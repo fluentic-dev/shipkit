@@ -4,13 +4,13 @@
   "type": "module",
   "packageManager": "pnpm@10.28.2",
   "scripts": {
-    "build": "pnpm --filter @fluentic/shipkit build",
+    "build": "pnpm --filter @fluentic/shipkit-appicon build && pnpm --filter @fluentic/shipkit build",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check",
     "dev": "pnpm --filter @fluentic/shipkit dev",
     "format": "dprint fmt",
     "format:check": "dprint check",
     "lint": "oxlint .",
-    "typecheck": "pnpm --filter @fluentic/shipkit typecheck && pnpm --filter @fluentic/shipkit-example-expo exec tsc --noEmit"
+    "typecheck": "pnpm --filter @fluentic/shipkit-appicon typecheck && pnpm --filter @fluentic/shipkit typecheck && pnpm --filter \"@fluentic/shipkit-example-*\" exec tsc --noEmit"
   },
   "devDependencies": {
     "dprint": "^0.63.0",

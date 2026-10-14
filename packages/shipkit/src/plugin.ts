@@ -4,7 +4,7 @@ type ExpoConfig = {
   extra?: Record<string, unknown>;
 };
 
-export function withShipkitEnv<T extends ExpoConfig>(config: T): T {
+export function withPlugin<T extends ExpoConfig>(config: T): T {
   config.extra = {
     ...config.extra,
     shipkit: runtimeEnvFromProcess()
@@ -13,4 +13,4 @@ export function withShipkitEnv<T extends ExpoConfig>(config: T): T {
   return config;
 }
 
-export default withShipkitEnv;
+export default withPlugin;

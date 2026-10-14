@@ -1,8 +1,14 @@
-import { withShipkitEnv } from '@fluentic/shipkit/plugin';
+import { runtimeEnvFromProcess } from '@fluentic/shipkit/utils';
 import type { ExpoConfig } from 'expo/config';
 
 export default ({ config }: { config: ExpoConfig; }): ExpoConfig => {
-  return withShipkitEnv({
+  const shipkit = runtimeEnvFromProcess();
+  const appleTeamId = typeof shipkit.envs?.IOS_TEAM_ID === 'string'
+    ? shipkit.envs.IOS_TEAM_ID
+    : undefined;
+  const bundleIdentifier = 'com.fluentic.shipkit.example';
+
+  return {
     ...config,
     name: 'Shipkit Example',
     slug: 'shipkit-example',
@@ -12,12 +18,13 @@ export default ({ config }: { config: ExpoConfig; }): ExpoConfig => {
     userInterfaceStyle: 'light',
     ios: {
       ...config.ios,
-      bundleIdentifier: 'com.fluentic.shipkit.example',
+      appleTeamId: appleTeamId || config.ios?.appleTeamId,
+      bundleIdentifier,
       supportsTablet: true
     },
     android: {
       ...config.android,
-      package: 'com.fluentic.shipkit.example',
+      package: bundleIdentifier,
       adaptiveIcon: {
         backgroundColor: '#E6F4FE',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -26,9 +33,14 @@ export default ({ config }: { config: ExpoConfig; }): ExpoConfig => {
       },
       predictiveBackGestureEnabled: false
     },
+    plugins: [
+      ...(config.plugins ?? []),
+      '@fluentic/shipkit',
+      ['@fluentic/shipkit-appicon', { source: 'assets/shipkit-appicon.tar.gz' }]
+    ],
     web: {
       ...config.web,
       favicon: './assets/favicon.png'
     }
-  });
+  };
 };

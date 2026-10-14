@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
+    "@fluentic/shipkit-appicon": "workspace:*",
+    "@fluentic/shipkit": "workspace:*",
+    "expo": "~57.0.28",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "main": "index.ts",
+  "name": "@fluentic/shipkit-example-expo-multi-env-extension",
+  "private": true,
+  "scripts": {
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "start": "expo start",
+    "web": "expo start --web"
+  },
+  "type": "module",
+  "version": "1.0.0"
+}

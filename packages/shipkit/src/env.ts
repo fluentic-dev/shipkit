@@ -13,12 +13,7 @@ export type BuildInfo<Envs = Record<string, unknown>> = {
 
 let constants: ExpoConstants | null = null;
 
-try {
-  const mod = await import('expo-constants');
-  constants = (mod.default ?? mod) as ExpoConstants;
-} catch {
-  constants = null;
-}
+constants = loadExpoConstants();
 
 export const buildInfo = readBuildInfo();
 export const shipkitEnv = buildInfo;
@@ -41,6 +36,16 @@ function readConstantsBuildInfo(): BuildInfo {
       ?? constants?.manifest?.extra?.shipkit
       ?? {}
   ) as BuildInfo;
+}
+
+function loadExpoConstants() {
+  try {
+    if (typeof require !== 'function') return null;
+    const mod = require('expo-constants') as { default?: ExpoConstants; };
+    return (mod.default ?? mod) as ExpoConstants;
+  } catch {
+    return null;
+  }
 }
 
 function readProcessBuildInfo(): BuildInfo {

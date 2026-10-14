@@ -119,8 +119,49 @@ export type NativeLicenseInput = {
 };
 
 export type NativeCommandInput = {
-  command: 'license-status';
+  command: 'license-info' | 'license-support';
   homeDir: string;
+};
+
+export type NativeCredentialsInput = {
+  appDir: string;
+  config: BuildManifest;
+  platforms?: Platform[];
+  iosPhase?: 'all' | 'certificates' | 'profiles';
+  iosCertificate?: {
+    action: 'keep' | 'path' | 'create' | 'remote';
+    p12Password?: string;
+    savePrivateKey?: boolean;
+    sourcePath?: string;
+    remoteCertificateId?: string;
+  };
+  apple?: {
+    keyId: string;
+    issuerId: string;
+    keyPath: string;
+  };
+  homeDir: string;
+};
+
+export type NativeAppleVerifyInput = {
+  apple: {
+    keyId: string;
+    issuerId: string;
+    keyPath: string;
+  };
+  homeDir: string;
+};
+
+export type NativeAppleCertificateListInput = NativeAppleVerifyInput;
+
+export type NativeAppleCertificateSummary = {
+  certificateType?: string;
+  displayName: string;
+  expirationDate?: string;
+  hasLocalPrivateKey: boolean;
+  id: string;
+  serialNumber?: string;
+  sha1?: string;
 };
 
 export type NativeBuildInput = {
@@ -135,8 +176,24 @@ export type NativeBuildInput = {
   homeDir: string;
 };
 
+export type NativeAppCommandInput = {
+  appDir: string;
+  name: string;
+  env: string;
+  platform: Platform;
+  command: 'switch' | 'prebuild' | 'dev' | 'ios-sign-auto';
+  config: BuildManifest;
+  args?: string[];
+  licenseKey?: string;
+  homeDir: string;
+};
+
 export type NativeBinding = {
   activateLicense(inputJson: string, onRequest: NativeRequestHandler): string;
   runCommand(inputJson: string, onRequest: NativeRequestHandler): string;
   runBuild(inputJson: string, onRequest: NativeRequestHandler): string;
+  runAppCommand(inputJson: string, onRequest: NativeRequestHandler): string;
+  setupCredentials(inputJson: string, onRequest: NativeRequestHandler): string;
+  verifyAppleApi(inputJson: string, onRequest: NativeRequestHandler): string;
+  listAppleCertificates(inputJson: string, onRequest: NativeRequestHandler): string;
 };

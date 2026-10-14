@@ -1,0 +1,48 @@
+{
+  "name": "@fluentic/shipkit-appicon",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/plugin.js",
+  "exports": {
+    ".": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js",
+      "default": "./dist/plugin.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "cf:build": "VITE_SHIPKIT_PROMO=true vite build --base /appicon/",
+    "cf:deploy": "pnpm run cf:build && wrangler deploy",
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit"
+  },
+  "dependencies": {
+    "@expo/config-plugins": "^57.0.10",
+    "@vitejs/plugin-react": "^5.1.2",
+    "react": "19.2.3",
+    "react-colorful": "^5.8.1",
+    "react-dom": "19.2.3",
+    "vite": "^7.2.7"
+  },
+  "peerDependencies": {
+    "expo": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.123.0"
+  }
+}

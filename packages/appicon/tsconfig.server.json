@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src/plugin.ts", "src/shared/**/*.ts"]
+}
