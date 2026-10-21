@@ -27,12 +27,12 @@
   "dependencies": {
     "@clack/prompts": "^1.8.1",
     "citty": "^0.2.2",
-    "wrap-ansi": "^9.0.2"
+    "wrap-ansi": "^10.0.2"
   },
   "devDependencies": {
-    "@types/node": "^22.19.0",
+    "@types/node": "^26.6.5",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
     "expo": "*"

@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "dprint": "^0.63.0",
-    "oxlint": "^1.87.0",
-    "typescript": "^5.9.3"
+    "oxlint": "^1.88.0",
+    "typescript": "^7.0.2"
   }
 }

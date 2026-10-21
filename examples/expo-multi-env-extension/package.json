@@ -3,14 +3,14 @@
     "@bacons/apple-targets": "^5.0.0",
     "@fluentic/shipkit-appicon": "workspace:*",
     "@fluentic/shipkit": "workspace:*",
-    "expo": "~57.0.28",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-native": "0.86.3"
+    "expo": "~58.0.14",
+    "expo-status-bar": "~58.0.3",
+    "react": "19.3.1",
+    "react-native": "0.88.0"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "@types/react": "~19.3.0",
+    "typescript": "~7.0.2"
   },
   "main": "index.ts",
   "name": "@fluentic/shipkit-example-expo-multi-env-extension",
