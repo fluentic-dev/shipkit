@@ -13,8 +13,8 @@
     "typecheck": "pnpm --filter @fluentic/shipkit-appicon typecheck && pnpm --filter @fluentic/shipkit typecheck && pnpm --filter \"@fluentic/shipkit-example-*\" exec tsc --noEmit"
   },
   "devDependencies": {
-    "dprint": "^0.63.0",
-    "oxlint": "^1.87.0",
-    "typescript": "^5.9.3"
+    "dprint": "^0.64.3",
+    "oxlint": "^1.89.0",
+    "typescript": "^7.0.2"
   }
 }
